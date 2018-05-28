@@ -1,0 +1,16 @@
+# Kconfig - Shell configuration options
+
+#
+# Copyright 2018 NXP
+#
+# SPDX-License-Identifier: Apache-2.0
+#
+
+config IPC_ERPC
+	bool
+	prompt "Enable embedded Remote Procesure Call"
+	default n
+	help
+	embedded Remote Procesure Call implementation.
+
+

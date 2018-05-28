@@ -9,5 +9,6 @@
 menu "Inter-Process Communication"
 
 source "ext/lib/ipc/rpmsg_lite/Kconfig"
+source "ext/lib/ipc/erpc/Kconfig"
 
 endmenu
