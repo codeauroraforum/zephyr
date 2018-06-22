@@ -53,7 +53,7 @@
 #define RL_GET_LINK_ID(id) (((id)&0xFFFFFFFE) >> 1)
 #define RL_GET_Q_ID(id) ((id)&0x1)
 
-#define RL_PLATFORM_IMX6SX_M4_LINK_ID (0)
+#define RL_PLATFORM_IMX7D_M4_LINK_ID (0)
 #define RL_PLATFORM_HIGHEST_LINK_ID (0)
 
 /* platform interrupt related functions */
