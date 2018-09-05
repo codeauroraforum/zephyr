@@ -46,10 +46,10 @@
 		label = "OCRAM_S";
 	};
 
-	ocram:memory@20900000 {
+	ocram:memory@00910000 {
 		device_type = "memory";
 		compatible = "nxp,imx-sys-bus";
-		reg = <0x20900000 0x00020000>;
+		reg = <0x00910000 0x00010000>;
 		label = "OCRAM";
 	};
 

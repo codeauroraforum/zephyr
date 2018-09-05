@@ -42,7 +42,7 @@
 	};
 
 	chosen {
-		zephyr,flash = &flash;
+		zephyr,flash = &ocram;
 		zephyr,sram = &tcmu;
 		zephyr,console = &uart5;
 		zephyr,shell-uart = &uart5;

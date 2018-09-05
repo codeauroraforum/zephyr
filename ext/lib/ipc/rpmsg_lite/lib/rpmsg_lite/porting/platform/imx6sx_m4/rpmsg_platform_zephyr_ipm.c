@@ -70,7 +70,7 @@ int platform_init_interrupt(int vector_id, void *isr_data)
     return 0;
 }
 
-int platform_deinit_interrupt(unsigned int vector_id)
+int platform_deinit_interrupt(int vector_id)
 {
     /* Prepare the MU Hardware */
     env_lock_mutex(platform_lock);
@@ -90,7 +90,7 @@ int platform_deinit_interrupt(unsigned int vector_id)
     return 0;
 }
 
-void platform_notify(unsigned int vector_id)
+void platform_notify(int vector_id)
 {
     int status;
     switch (RL_GET_LINK_ID(vector_id))
@@ -235,7 +235,7 @@ void *platform_patova(unsigned long addr)
 int platform_init(void)
 {
     /* Get IPM device handle */
-    ipm_handle = device_get_binding(MU_B_LABEL);
+    ipm_handle = device_get_binding(DT_NXP_IMX_MU_MU_B_LABEL);
     if(!ipm_handle)
     {
         return -1;

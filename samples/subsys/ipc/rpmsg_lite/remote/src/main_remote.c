@@ -14,12 +14,17 @@
 #include "rpmsg_queue.h"
 #include "rpmsg_ns.h"
 
-#define APP_TASK_STACK_SIZE (384)
+#define APP_TASK_STACK_SIZE (384 * 2) // TODO
 #define LOCAL_EPT_ADDR (30)
 
 #ifdef CPU_LPC54114J256BD64_cm0plus
 #define RPMSG_LITE_LINK_ID (RL_PLATFORM_LPC5411x_M4_M0_LINK_ID)
 #define RPMSG_LITE_SHMEM_BASE (0x20026800)
+#define RPMSG_LITE_NS_USED (1)
+#define RPMSG_LITE_NS_ANNOUNCE_STRING "rpmsg-openamp-demo-channel"
+#elif defined(CONFIG_SOC_SERIES_IMX_6X_M4)
+#define RPMSG_LITE_LINK_ID (RL_PLATFORM_IMX6SX_M4_LINK_ID)
+#define RPMSG_LITE_SHMEM_BASE (0xBFFF0000)
 #define RPMSG_LITE_NS_USED (1)
 #define RPMSG_LITE_NS_ANNOUNCE_STRING "rpmsg-openamp-demo-channel"
 #else
