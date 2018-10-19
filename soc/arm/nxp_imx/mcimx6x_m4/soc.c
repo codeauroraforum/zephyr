@@ -185,7 +185,7 @@ static int mcimx6x_m4_init(struct device *arg)
 	WDOG_DisablePowerdown(WDOG3);
 
 	/* Initialize Cache */
-	// TODO SOC_CacheInit();
+	SOC_CacheInit();
 
 	_ClearFaults();
 

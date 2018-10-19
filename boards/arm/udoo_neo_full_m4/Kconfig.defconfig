@@ -47,10 +47,10 @@ config GPIO_IMX_PORT_4
 	default y
 
 config GPIO_IMX_PORT_5
-	default n
+	default y
 
 config GPIO_IMX_PORT_6
-	default n
+	default y
 
 config GPIO_IMX_PORT_7
 	default n

@@ -14,7 +14,7 @@
 #include "rpmsg_queue.h"
 #include "rpmsg_ns.h"
 
-#define APP_TASK_STACK_SIZE (384 * 2) // TODO
+#define APP_TASK_STACK_SIZE (384 * 2) /* TODO */
 #define LOCAL_EPT_ADDR (30)
 
 #ifdef CPU_LPC54114J256BD64_cm0plus
