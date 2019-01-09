@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2018 NXP
+ * Copyright (c) 2018 - 2019 NXP
  *
  * SPDX-License-Identifier: Apache-2.0
  */
@@ -260,7 +260,7 @@ static int soft_uart_8N1_stop_bit_last_sample(
 	}
 
 	/* Bit error (in data bits or stop bit) */
-	printk("s: %u, p: 0x%04x\n", sample, ctx->parity);
+	/* printk("s: %u, p: 0x%04x\n", sample, ctx->parity); */
 	return -2;
 }
 
@@ -390,9 +390,9 @@ static const soft_uart_tx_state soft_uart_8N1_tx_states[] = {
 static void counter_callback(struct device *dev, void *user_data)
 {
 	static u32_t divider = OVERSAMPLING;
-	volatile struct soft_uart_tx_context *txctx;
 	u32_t next_rx_wr;
-	int i;
+	/* volatile struct soft_uart_tx_context *txctx; */
+	/* int i; */
 
 	/* RX */
 	if (rx_count > 0) {
@@ -414,20 +414,47 @@ static void counter_callback(struct device *dev, void *user_data)
 			divider = OVERSAMPLING;
 			if (tx_rd == tx_wr) {
 				/* tx buffer empty */
-				for (i = 0; i < tx_count; i++) {
-					txctx = &tx_contexts[i];
-					if (txctx->state != 0) {
-						underflow_count++;
-						break;
-					}
-				}
+				/*
+				 * for (i = 0; i < tx_count; i++) {
+				 *         txctx = &tx_contexts[i];
+				 *         if (txctx->state != 0) {
+				 *                 underflow_count++;
+				 *                 break;
+				 *         }
+				 * }
+				 */
 				return;
 			}
 
-			not_underflow_count++; /* TODO remove */
+			/* not_underflow_count++; */
 			gpio_port_write(gpio_dev, tx_buffer[tx_rd]);
 			tx_rd = (tx_rd + 1U) % TX_BUFFER_LEN;
 		}
+	}
+}
+
+static void rx_check_timeout(volatile struct soft_uart_rx_context *rxctx)
+{
+	int ret;
+
+	if ((rxctx->char_buffer_length == rxctx->char_buffer_size)
+	    || ((rxctx->char_buffer_length > 0U)
+		&& (SYS_CLOCK_HW_CYCLES_TO_NS(k_cycle_get_32()
+			- rxctx->data_timestamp) > MAX_DELAY_BEFORE_SEND_NS))) {
+		do {
+			ret = rpmsg_lite_send_nocopy(rpmsg, rxctx->rpmsg_ept,
+						     rxctx->rpmsg_ept->addr,
+						     (void *)rxctx->char_buffer,
+						     rxctx->char_buffer_length);
+		} while (ret != RL_SUCCESS);
+
+		do {
+			rxctx->char_buffer = rpmsg_lite_alloc_tx_buffer(rpmsg,
+				      (unsigned long *)&rxctx->char_buffer_size,
+				      RL_DONT_BLOCK);
+		} while (rxctx->char_buffer == NULL);
+
+		rxctx->char_buffer_length = 0;
 	}
 }
 
@@ -435,39 +462,17 @@ static void rx_check_timeouts(void)
 {
 	volatile struct soft_uart_rx_context *rxctx;
 	int i;
-	int ret;
 
 	for (i = 0; i < rx_count; i++) {
 		rxctx = &rx_contexts[i];
-
-		if ((rxctx->char_buffer_length == rxctx->char_buffer_size)
-		    || ((rxctx->char_buffer_length > 0U)
-			&& (SYS_CLOCK_HW_CYCLES_TO_NS(k_cycle_get_32()
-			- rxctx->data_timestamp) > MAX_DELAY_BEFORE_SEND_NS))) {
-			ret = rpmsg_lite_send_nocopy(rpmsg, rxctx->rpmsg_ept,
-						   i + SOFT_PERIPH_TXRX_EP_BASE,
-						   (void *)rxctx->char_buffer,
-						   rxctx->char_buffer_length);
-			/*
-			 * TODO keep the data instead and drop incoming
-			 * characters in rx_thread()
-			 */
-			__ASSERT(ret == RL_SUCCESS, "ret != RL_SUCCESS");
-
-			rxctx->char_buffer = rpmsg_lite_alloc_tx_buffer(rpmsg,
-				      (unsigned long *)&rxctx->char_buffer_size,
-				      RL_DONT_BLOCK);
-			__ASSERT(rxctx->char_buffer,
-				 "rxctx->char_buffer is NULL\n");
-			rxctx->char_buffer_length = 0;
-		}
+		rx_check_timeout(rxctx);
 	}
 }
 
 static void rx_thread(void *p1, void *p2, void *p3)
 {
 	volatile struct soft_uart_rx_context *rxctx;
-	u32_t cnt = 0U;
+	/* u32_t cnt = 0U; */
 	int i;
 	int x;
 
@@ -489,8 +494,7 @@ static void rx_thread(void *p1, void *p2, void *p3)
 			   ((rx_buffer[rx_rd] & (1U << rxctx->pin)) ? 1U : 0U));
 
 				if (x >= 0) {
-					/* TODO remove */
-					printk("%d: %c <%02X>\n", i, x, x);
+					/* printk("%d: %c <%02X>\n", i,x,x); */
 
 					rxctx->char_buffer[
 						rxctx->char_buffer_length++] =
@@ -503,7 +507,7 @@ static void rx_thread(void *p1, void *p2, void *p3)
 					}
 				} else if (x == -2) {
 					/* TODO add error flag and send */
-					printk("%d: Err\n", i);
+					/* printk("%d: Err\n", i); */
 				}
 			}
 		}
@@ -511,14 +515,16 @@ static void rx_thread(void *p1, void *p2, void *p3)
 		rx_rd = (rx_rd + 1U) % RX_BUFFER_LEN;
 
 		/* TODO remove */
-		cnt++;
-		if ((cnt % 1500000U) == 0U) {
-			printk("o=%u,u=%u,nu=%u\n",
-				overflow_count, underflow_count,
-				not_underflow_count);
-			printk("rx_size=%u\n", RX_SIZE);
-			printk("tx_size=%u\n", TX_SIZE);
-		}
+		/*
+		 * cnt++;
+		 * if ((cnt % 1500000U) == 0U) {
+		 *         printk("o=%u,u=%u,nu=%u\n",
+		 *                overflow_count, underflow_count,
+		 *                not_underflow_count);
+		 *         printk("rx_size=%u\n", RX_SIZE);
+		 *         printk("tx_size=%u\n", TX_SIZE);
+		 * }
+		 */
 	}
 }
 
@@ -606,7 +612,6 @@ void main(void)
 	struct soft_periph_config_entry cfg;
 
 	printk("SW UART demo is starting...\n");
-	printk("build time: %s\n", __TIME__); /* TODO remove */
 
 	gpio_dev = device_get_binding(GPIO_UART_PORT);
 
