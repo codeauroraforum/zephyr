@@ -33,8 +33,6 @@
 #define TX_THREAD_STACK_SIZE	(500)
 #define TX_THREAD_PRIORITY	(RX_THREAD_PRIORITY)
 
-#define MAX_DELAY_BEFORE_SEND_NS (1000000) /* 1 millisecond */
-
 #define SOFT_PERIPH_ANNOUNCE_EP		(99)
 #define SOFT_PERIPH_TXRX_EP_BASE	(100)
 
@@ -69,6 +67,7 @@ struct soft_uart_rx_context {
 	volatile int char_buffer_length;
 	unsigned long char_buffer_size;
 	volatile u32_t data_timestamp;
+	u32_t max_delay_before_send_ns;
 
 	const soft_uart_rx_state *states;
 };
@@ -123,9 +122,7 @@ static volatile struct soft_uart_tx_context
 static volatile int rx_count;
 static volatile int tx_count;
 
-/* TODO remove: */
-static volatile u32_t underflow_count;
-static volatile u32_t not_underflow_count;
+/* TODO for debugging, remove: */
 static volatile u32_t overflow_count;
 
 /* Functions */
@@ -391,8 +388,6 @@ static void counter_callback(struct device *dev, void *user_data)
 {
 	static u32_t divider = OVERSAMPLING;
 	u32_t next_rx_wr;
-	/* volatile struct soft_uart_tx_context *txctx; */
-	/* int i; */
 
 	/* RX */
 	if (rx_count > 0) {
@@ -413,20 +408,13 @@ static void counter_callback(struct device *dev, void *user_data)
 		if (divider == 0U) {
 			divider = OVERSAMPLING;
 			if (tx_rd == tx_wr) {
-				/* tx buffer empty */
 				/*
-				 * for (i = 0; i < tx_count; i++) {
-				 *         txctx = &tx_contexts[i];
-				 *         if (txctx->state != 0) {
-				 *                 underflow_count++;
-				 *                 break;
-				 *         }
-				 * }
+				 * tx buffer is empty - either there is
+				 * nothing to send or it is underflow
 				 */
 				return;
 			}
 
-			/* not_underflow_count++; */
 			gpio_port_write(gpio_dev, tx_buffer[tx_rd]);
 			tx_rd = (tx_rd + 1U) % TX_BUFFER_LEN;
 		}
@@ -436,11 +424,20 @@ static void counter_callback(struct device *dev, void *user_data)
 static void rx_check_timeout(volatile struct soft_uart_rx_context *rxctx)
 {
 	int ret;
+	u64_t cycles;
 
-	if ((rxctx->char_buffer_length == rxctx->char_buffer_size)
-	    || ((rxctx->char_buffer_length > 0U)
-		&& (SYS_CLOCK_HW_CYCLES_TO_NS(k_cycle_get_32()
-			- rxctx->data_timestamp) > MAX_DELAY_BEFORE_SEND_NS))) {
+	if (rxctx->char_buffer_length == 0U) {
+		return;
+	}
+
+	cycles = k_cycle_get_32();
+	if (cycles < rxctx->data_timestamp) {
+		cycles += (((u64_t)1U) << 32);
+	}
+
+	if ((SYS_CLOCK_HW_CYCLES_TO_NS((u32_t)(cycles - rxctx->data_timestamp))
+					      > rxctx->max_delay_before_send_ns)
+	    || (rxctx->char_buffer_length == rxctx->char_buffer_size)) {
 		do {
 			ret = rpmsg_lite_send_nocopy(rpmsg, rxctx->rpmsg_ept,
 						     rxctx->rpmsg_ept->addr,
@@ -502,9 +499,9 @@ static void rx_thread(void *p1, void *p2, void *p3)
 					if (rxctx->char_buffer_length == 1U) {
 						rxctx->data_timestamp =
 							       k_cycle_get_32();
-					} else {
-						rx_check_timeouts();
 					}
+
+					rx_check_timeout(rxctx);
 				} else if (x == -2) {
 					/* TODO add error flag and send */
 					/* printk("%d: Err\n", i); */
@@ -514,13 +511,11 @@ static void rx_thread(void *p1, void *p2, void *p3)
 
 		rx_rd = (rx_rd + 1U) % RX_BUFFER_LEN;
 
-		/* TODO remove */
+		/* TODO for debugging, remove: */
 		/*
 		 * cnt++;
 		 * if ((cnt % 1500000U) == 0U) {
-		 *         printk("o=%u,u=%u,nu=%u\n",
-		 *                overflow_count, underflow_count,
-		 *                not_underflow_count);
+		 *         printk("overflow=%u\n", overflow_count);
 		 *         printk("rx_size=%u\n", RX_SIZE);
 		 *         printk("tx_size=%u\n", TX_SIZE);
 		 * }
@@ -533,7 +528,8 @@ static void tx_thread(void *p1, void *p2, void *p3)
 	volatile struct soft_uart_tx_context *txctx;
 	volatile u32_t *buffer;
 	int i;
-	u8_t state;
+	u32_t idle_before;
+	u32_t idle_after;
 	u32_t next_tx_wr;
 
 	printk("%s starting\n", __func__);
@@ -544,7 +540,8 @@ static void tx_thread(void *p1, void *p2, void *p3)
 		buffer = &tx_buffer[tx_wr];
 
 		do {
-			state = 0U;
+			idle_before = 0U;
+			idle_after = 0U;
 			next_tx_wr = (tx_wr + 1U) % TX_BUFFER_LEN;
 
 			while (next_tx_wr == tx_rd) {
@@ -555,16 +552,18 @@ static void tx_thread(void *p1, void *p2, void *p3)
 			*buffer = 0U;
 
 			for (i = 0; i < tx_count; i++) {
-				txctx = &tx_contexts[i];
 				/* process each tx pin */
+
+				txctx = &tx_contexts[i];
+
+				idle_before |= txctx->state;
 				while (txctx->states[txctx->state](txctx,
 								   buffer)) {
 				}
-				state |= txctx->state;
+				idle_after |= txctx->state;
 
 				if (txctx->state == 0) {
 					/* tx done, no tx in progress */
-
 					if (txctx->rpmsg_buffer != NULL) {
 						rpmsg_queue_nocopy_free(rpmsg,
 						   (void *)txctx->rpmsg_buffer);
@@ -584,9 +583,22 @@ static void tx_thread(void *p1, void *p2, void *p3)
 					}
 				}
 			}
-			tx_wr = next_tx_wr;
-			buffer = &tx_buffer[tx_wr];
-		} while (state != 0); /* while any tx state is not idle */
+
+			if ((idle_before != 0U) || (idle_after != 0U)) {
+				/*
+				 * There was some activity, at least one tx pin
+				 * did not begin and end in idle state.
+				 * We can advance the buffer position. Otherwise
+				 * tx_buffer would be filled needlessly.
+				 */
+				tx_wr = next_tx_wr;
+				buffer = &tx_buffer[tx_wr];
+			}
+
+		/* while any tx state is not idle */
+		} while (idle_after != 0U);
+
+		k_yield();
 	}
 }
 
@@ -793,6 +805,18 @@ void main(void)
 
 			rxctx->pin = cfg.uart.rxpin;
 			rxctx->divider = base_baud_rate / cfg.uart.baud;
+			rxctx->max_delay_before_send_ns = 1000000U; /* 1 ms */
+			if ((10000000000 / cfg.uart.baud) >
+					      rxctx->max_delay_before_send_ns) {
+				/*
+				 * If the number of nanoseconds needed to send
+				 * one char is greater than the delay, send
+				 * the received char immediately, do not wait
+				 * for additional characters to form a group.
+				 */
+				rxctx->max_delay_before_send_ns = 0U;
+			}
+
 			rxctx->states = soft_uart_8N1_rx_states;
 			rxctx->state = 0U;
 			rxctx->div_counter = 1U;
