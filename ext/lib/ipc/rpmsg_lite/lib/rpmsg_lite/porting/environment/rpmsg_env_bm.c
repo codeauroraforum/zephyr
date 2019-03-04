@@ -2,7 +2,7 @@
  * Copyright (c) 2014, Mentor Graphics Corporation
  * Copyright (c) 2015 Xilinx, Inc.
  * Copyright (c) 2016 Freescale Semiconductor, Inc.
- * Copyright 2016 NXP
+ * Copyright 2016-2019 NXP
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -50,7 +50,6 @@
 
 #include <stdlib.h>
 #include <string.h>
-#include <assert.h>
 
 static int env_init_counter = 0;
 
@@ -65,16 +64,9 @@ struct isr_info
 };
 static struct isr_info isr_table[ISR_COUNT];
 
-/*!
- * env_in_isr
- *
- * @returns True, if currently in ISR
- *
- */
-inline int env_in_isr(void)
-{
-    return platform_in_isr();
-}
+#if defined(RL_USE_ENVIRONMENT_CONTEXT) && (RL_USE_ENVIRONMENT_CONTEXT == 1)
+#error "This RPMsg-Lite port requires RL_USE_ENVIRONMENT_CONTEXT set to 0"
+#endif
 
 /*!
  * env_init
@@ -85,13 +77,17 @@ inline int env_in_isr(void)
 int env_init(void)
 {
     // verify 'env_init_counter'
-    assert(env_init_counter >= 0);
+    RL_ASSERT(env_init_counter >= 0);
     if (env_init_counter < 0)
+    {
         return -1;
+    }
     env_init_counter++;
     // multiple call of 'env_init' - return ok
     if (1 < env_init_counter)
+    {
         return 0;
+    }
     // first call
     memset(isr_table, 0, sizeof(isr_table));
     return platform_init();
@@ -107,14 +103,18 @@ int env_init(void)
 int env_deinit(void)
 {
     // verify 'env_init_counter'
-    assert(env_init_counter > 0);
+    RL_ASSERT(env_init_counter > 0);
     if (env_init_counter <= 0)
+    {
         return -1;
+    }
     // counter on zero - call platform deinit
     env_init_counter--;
     // multiple call of 'env_deinit' - return ok
     if (0 < env_init_counter)
+    {
         return 0;
+    }
     // last call
     return platform_deinit();
 }
@@ -218,7 +218,7 @@ void env_mb(void)
 }
 
 /*!
- * osalr_mb - implementation
+ * env_rmb - implementation
  */
 void env_rmb(void)
 {
@@ -316,12 +316,12 @@ void env_sleep_msec(int num_msec)
  *
  * Registers interrupt handler data for the given interrupt vector.
  *
- * @param vector_id Virtual interrupt vector number
- * @param data Interrupt handler data (virtqueue)
+ * @param vector_id - virtual interrupt vector number
+ * @param data      - interrupt handler data (virtqueue)
  */
 void env_register_isr(int vector_id, void *data)
 {
-    assert(vector_id < ISR_COUNT);
+    RL_ASSERT(vector_id < ISR_COUNT);
     if (vector_id < ISR_COUNT)
     {
         isr_table[vector_id].data = data;
@@ -337,7 +337,7 @@ void env_register_isr(int vector_id, void *data)
  */
 void env_unregister_isr(int vector_id)
 {
-    assert(vector_id < ISR_COUNT);
+    RL_ASSERT(vector_id < ISR_COUNT);
     if (vector_id < ISR_COUNT)
     {
         isr_table[vector_id].data = NULL;
@@ -349,7 +349,7 @@ void env_unregister_isr(int vector_id)
  *
  * Enables the given interrupt
  *
- * @param vector_id Interrupt vector number
+ * @param vector_id   - virtual interrupt vector number
  */
 
 void env_enable_interrupt(unsigned int vector_id)
@@ -362,7 +362,7 @@ void env_enable_interrupt(unsigned int vector_id)
  *
  * Disables the given interrupt
  *
- * @param vector_id Interrupt vector number
+ * @param vector_id   - virtual interrupt vector number
  */
 
 void env_disable_interrupt(unsigned int vector_id)
@@ -393,7 +393,7 @@ void env_map_memory(unsigned int pa, unsigned int va, unsigned int size, unsigne
  *
  */
 
-void env_disable_cache()
+void env_disable_cache(void)
 {
     platform_cache_all_flush_invalidate();
     platform_cache_disable();
@@ -405,7 +405,7 @@ void env_disable_cache()
 void env_isr(int vector)
 {
     struct isr_info *info;
-    assert(vector < ISR_COUNT);
+    RL_ASSERT(vector < ISR_COUNT);
     if (vector < ISR_COUNT)
     {
         info = &isr_table[vector];

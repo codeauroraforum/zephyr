@@ -10,19 +10,17 @@
 #ifndef _RPMSG_PLATFORM_H
 #define _RPMSG_PLATFORM_H
 
-/* RPMSG MU channel index */
-#define RPMSG_MU_CHANNEL (1)
-
 /*
- * Linux requires the ALIGN to 0x1000(4KB) instead of 0x80
- */
+* No need to align the VRING as defined in Linux because k32w0x2s is not intended
+* to run the Linux
+*/
 #ifndef VRING_ALIGN
-#define VRING_ALIGN (0x1000)
+#define VRING_ALIGN (0x10)
 #endif
 
-/* contains pool of descriptors and two circular buffers */
+/* contains pool of descriptos and two circular buffers */
 #ifndef VRING_SIZE
-#define VRING_SIZE (0x8000)
+#define VRING_SIZE (0x400)
 #endif
 
 /* size of shared memory + 2*VRING size */
@@ -32,7 +30,7 @@
 #define RL_GET_LINK_ID(id) (((id)&0xFFFFFFFE) >> 1)
 #define RL_GET_Q_ID(id) ((id)&0x1)
 
-#define RL_PLATFORM_IMX6SX_M4_LINK_ID (0)
+#define RL_PLATFORM_K32W0X2S_M4_M0_LINK_ID (0)
 #define RL_PLATFORM_HIGHEST_LINK_ID (0)
 
 /* platform interrupt related functions */
@@ -56,6 +54,5 @@ void *platform_patova(unsigned long addr);
 /* platform init/deinit */
 int platform_init(void);
 int platform_deinit(void);
-void rpmsg_handler(void);
 
 #endif /* _RPMSG_PLATFORM_H */

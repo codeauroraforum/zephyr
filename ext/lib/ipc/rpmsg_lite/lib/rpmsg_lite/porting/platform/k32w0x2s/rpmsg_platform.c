@@ -13,7 +13,7 @@
 #include "rpmsg_env.h"
 
 #include "fsl_device_registers.h"
-#include "fsl_mailbox.h"
+#include "fsl_mu.h"
 
 #if defined(RL_USE_MCMGR_IPC_ISR_HANDLER) && (RL_USE_MCMGR_IPC_ISR_HANDLER == 1)
 #include "mcmgr.h"
@@ -33,34 +33,45 @@ static void mcmgr_event_handler(uint16_t vring_idx, void *context)
     env_isr(vring_idx);
 }
 #else
-void MAILBOX_IRQHandler(void)
+static void mu_isr(MU_Type *base)
 {
-    mailbox_cpu_id_t cpu_id;
-#if defined(FSL_FEATURE_MAILBOX_SIDE_A)
-    cpu_id = kMAILBOX_CM4;
-#else
-    cpu_id = kMAILBOX_CM0Plus;
-#endif
-
-    uint32_t value = MAILBOX_GetValue(MAILBOX, cpu_id);
-
-    if (value & 0x01)
+    uint32_t flags;
+    flags = MU_GetStatusFlags(base);
+    if (kMU_GenInt0Flag & flags)
     {
-        MAILBOX_ClearValueBits(MAILBOX, cpu_id, 0x01);
+        MU_ClearStatusFlags(base, kMU_GenInt0Flag);
         env_isr(0);
     }
-    if (value & 0x02)
+    if (kMU_GenInt1Flag & flags)
     {
-        MAILBOX_ClearValueBits(MAILBOX, cpu_id, 0x02);
+        MU_ClearStatusFlags(base, kMU_GenInt1Flag);
         env_isr(1);
     }
+}
 
+#if defined(FSL_FEATURE_MU_SIDE_A)
+int MUA_IRQHandler()
+{
+    mu_isr(MUA);
     /* Add for ARM errata 838869, affects Cortex-M4, Cortex-M4F Store immediate overlapping
       exception return operation might vector to incorrect interrupt */
 #if defined __CORTEX_M && (__CORTEX_M == 4U)
     __DSB();
 #endif
+    return 0;
 }
+#elif defined(FSL_FEATURE_MU_SIDE_B)
+int MUB_IRQHandler()
+{
+    mu_isr(MUB);
+    /* Add for ARM errata 838869, affects Cortex-M4, Cortex-M4F Store immediate overlapping
+      exception return operation might vector to incorrect interrupt */
+#if defined __CORTEX_M && (__CORTEX_M == 4U)
+    __DSB();
+#endif
+    return 0;
+}
+#endif
 #endif
 
 void platform_global_isr_disable(void)
@@ -82,12 +93,12 @@ int platform_init_interrupt(unsigned int vector_id, void *isr_data)
     env_lock_mutex(platform_lock);
 
     RL_ASSERT(0 <= isr_counter);
-    if (!isr_counter)
+    if (isr_counter < 2)
     {
-#if defined(FSL_FEATURE_MAILBOX_SIDE_A)
-        NVIC_SetPriority(MAILBOX_IRQn, 5);
-#else
-        NVIC_SetPriority(MAILBOX_IRQn, 2);
+#if defined(FSL_FEATURE_MU_SIDE_A)
+        MU_EnableInterrupts(MUA, 1 << (31 - vector_id));
+#elif defined(FSL_FEATURE_MU_SIDE_B)
+        MU_EnableInterrupts(MUB, 1 << (31 - vector_id));
 #endif
     }
     isr_counter++;
@@ -104,9 +115,13 @@ int platform_deinit_interrupt(unsigned int vector_id)
 
     RL_ASSERT(0 < isr_counter);
     isr_counter--;
-    if (!isr_counter)
-    {
-        NVIC_DisableIRQ(MAILBOX_IRQn);
+    if (isr_counter < 2)
+	{
+#if defined(FSL_FEATURE_MU_SIDE_A)
+        MU_DisableInterrupts(MUA, 1 << (31 - vector_id));
+#elif defined(FSL_FEATURE_MU_SIDE_B)
+        MU_DisableInterrupts(MUB, 1 << (31 - vector_id));
+#endif
     }
 
     /* Unregister ISR from environment layer */
@@ -119,33 +134,21 @@ int platform_deinit_interrupt(unsigned int vector_id)
 
 void platform_notify(unsigned int vector_id)
 {
-#if defined(RL_USE_MCMGR_IPC_ISR_HANDLER) && (RL_USE_MCMGR_IPC_ISR_HANDLER == 1)
     env_lock_mutex(platform_lock);
+#if defined(RL_USE_MCMGR_IPC_ISR_HANDLER) && (RL_USE_MCMGR_IPC_ISR_HANDLER == 1)
     MCMGR_TriggerEventForce(kMCMGR_RemoteRPMsgEvent, RL_GET_Q_ID(vector_id));
-    env_unlock_mutex(platform_lock);
 #else
-/* Only single RPMsg-Lite instance (LINK_ID) is defined for this dual core device. Extend
-   this statement in case multiple instances of RPMsg-Lite are needed. */
-    switch (RL_GET_LINK_ID(vector_id))
-    {
-        case RL_PLATFORM_LPC5410x_M4_M0_LINK_ID:
-            env_lock_mutex(platform_lock);
-/* Write directly into the Mailbox register, no need to wait until the content is cleared
+/* Write directly into the MU TX register, no need to wait until the content is cleared
    (consumed by the receiver side) because the same walue of the virtqueu ID is written
    into this register when trigerring the ISR for the receiver side. The whole queue of
    received buffers for associated virtqueue is handled in the ISR then. */
-#if defined(FSL_FEATURE_MAILBOX_SIDE_A)
-            MAILBOX_SetValueBits(MAILBOX, kMAILBOX_CM0Plus, (1 << RL_GET_Q_ID(vector_id)));
-#else
-            MAILBOX_SetValueBits(MAILBOX, kMAILBOX_CM4, (1 << RL_GET_Q_ID(vector_id)));
+#if defined(FSL_FEATURE_MU_SIDE_A)
+    MU_TriggerInterrupts(MUA, 1 << (19 - RL_GET_Q_ID(vector_id)));
+#elif defined(FSL_FEATURE_MU_SIDE_B)
+    MU_TriggerInterrupts(MUB, 1 << (19 - RL_GET_Q_ID(vector_id)));
 #endif
-            env_unlock_mutex(platform_lock);
-            return;
-
-        default:
-            return;
-    }
 #endif
+    env_unlock_mutex(platform_lock);
 }
 
 /**
@@ -204,8 +207,12 @@ int platform_interrupt_enable(unsigned int vector_id)
     disable_counter--;
 
     if (!disable_counter)
-    {
-        NVIC_EnableIRQ(MAILBOX_IRQn);
+	{
+#if defined(FSL_FEATURE_MU_SIDE_A)
+        NVIC_EnableIRQ(MUA_IRQn);
+#elif defined(FSL_FEATURE_MU_SIDE_B)
+        NVIC_EnableIRQ(MUB_IRQn);
+#endif
     }
     platform_global_isr_enable();
     return (vector_id);
@@ -230,8 +237,14 @@ int platform_interrupt_disable(unsigned int vector_id)
        if counter is set - the interrupts are disabled */
     if (!disable_counter)
     {
-        NVIC_DisableIRQ(MAILBOX_IRQn);
+#if defined(FSL_FEATURE_MU_SIDE_A)
+        NVIC_DisableIRQ(MUA_IRQn);
+        NVIC_SetPriority(MUA_IRQn, 2);
+#elif defined(FSL_FEATURE_MU_SIDE_B)
+        NVIC_DisableIRQ(MUB_IRQn);
+#endif
     }
+
     disable_counter++;
     platform_global_isr_enable();
     return (vector_id);
@@ -296,17 +309,18 @@ void *platform_patova(unsigned long addr)
  */
 int platform_init(void)
 {
+    /* The MU peripheral driver is not initialized here because it covers also
+    the secondary core booting controls and it needs to be initialized earlier
+    in the application code */
+
 #if defined(RL_USE_MCMGR_IPC_ISR_HANDLER) && (RL_USE_MCMGR_IPC_ISR_HANDLER == 1)
-    mcmgr_status_t retval = kStatus_MCMGR_Error;
+    mcmgr_status_t retval;
     retval = MCMGR_RegisterEvent(kMCMGR_RemoteRPMsgEvent, mcmgr_event_handler, NULL);
     if(kStatus_MCMGR_Success != retval)
     {
         return -1;
     }
-#else
-    MAILBOX_Init(MAILBOX);
-#endif
-
+#endif    
     /* Create lock used in multi-instanced RPMsg */
     if(0 != env_create_mutex(&platform_lock, 1))
     {
@@ -323,20 +337,6 @@ int platform_init(void)
  */
 int platform_deinit(void)
 {
-/* Important for LPC54102 - do not deinit mailbox, if there
-   is a pending ISR on the other core! */
-#if defined(FSL_FEATURE_MAILBOX_SIDE_A)
-    while (0 != MAILBOX_GetValue(MAILBOX, kMAILBOX_CM0Plus))
-    {
-    }
-#else
-    while (0 != MAILBOX_GetValue(MAILBOX, kMAILBOX_CM4))
-    {
-    }
-#endif
-
-    MAILBOX_Deinit(MAILBOX);
-
     /* Delete lock used in multi-instanced RPMsg */
     env_delete_mutex(platform_lock);
     platform_lock = NULL;

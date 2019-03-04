@@ -2,7 +2,7 @@
  * Copyright (c) 2014, Mentor Graphics Corporation
  * Copyright (c) 2015 Xilinx, Inc.
  * Copyright (c) 2016 Freescale Semiconductor, Inc.
- * Copyright 2016 NXP
+ * Copyright 2016-2019 NXP
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -53,10 +53,17 @@
 
 #include <stdlib.h>
 #include <string.h>
-#include <assert.h>
 
 static int env_init_counter = 0;
 SemaphoreHandle_t env_sema = NULL;
+
+/* RL_ENV_MAX_MUTEX_COUNT is an arbitrary count greater than 'count'
+   if the inital count is 1, this function behaves as a mutex
+   if it is greater than 1, it acts as a "resource allocator" with 
+   the maximum of 'count' resources available. 
+   Currently, only the first use-case is applicable/applied in RPMsg-Lite.
+ */
+#define RL_ENV_MAX_MUTEX_COUNT (10)
 
 /* Max supported ISR counts */
 #define ISR_COUNT (32)
@@ -69,13 +76,17 @@ struct isr_info
 };
 static struct isr_info isr_table[ISR_COUNT];
 
+#if defined(RL_USE_ENVIRONMENT_CONTEXT) && (RL_USE_ENVIRONMENT_CONTEXT == 1)
+#error "This RPMsg-Lite port requires RL_USE_ENVIRONMENT_CONTEXT set to 0"
+#endif
+
 /*!
  * env_in_isr
  *
  * @returns - true, if currently in ISR
  *
  */
-int env_in_isr(void)
+static int env_in_isr(void)
 {
     return platform_in_isr();
 }
@@ -91,7 +102,7 @@ int env_init(void)
     int retval;
     vTaskSuspendAll(); /* stop scheduler */
     // verify 'env_init_counter'
-    assert(env_init_counter >= 0);
+    RL_ASSERT(env_init_counter >= 0);
     if (env_init_counter < 0)
     {
         xTaskResumeAll(); /* re-enable scheduler */
@@ -118,7 +129,7 @@ int env_init(void)
          * if needed and other tasks to wait for the
          * blocking to be done.
          * This is in ENV layer as this is ENV specific.*/
-        xSemaphoreTake(env_sema, portMAX_DELAY);
+        (void)xSemaphoreTake(env_sema, portMAX_DELAY);
         xSemaphoreGive(env_sema);
         return 0;
     }
@@ -137,7 +148,7 @@ int env_deinit(void)
 
     vTaskSuspendAll(); /* stop scheduler */
     // verify 'env_init_counter'
-    assert(env_init_counter > 0);
+    RL_ASSERT(env_init_counter > 0);
     if (env_init_counter <= 0)
     {
         xTaskResumeAll(); /* re-enable scheduler */
@@ -182,7 +193,10 @@ void *env_allocate_memory(unsigned int size)
  */
 void env_free_memory(void *ptr)
 {
-    vPortFree(ptr);
+    if (ptr != NULL)
+    {
+        vPortFree(ptr);
+    }
 }
 
 /*!
@@ -261,7 +275,7 @@ void env_mb(void)
 }
 
 /*!
- * osalr_mb - implementation
+ * env_rmb - implementation
  */
 void env_rmb(void)
 {
@@ -304,7 +318,12 @@ void *env_map_patova(unsigned long address)
  */
 int env_create_mutex(void **lock, int count)
 {
-    *lock = xSemaphoreCreateCounting(10, count);
+    if(count > RL_ENV_MAX_MUTEX_COUNT)
+    {
+        return -1;   
+    }
+    
+    *lock = xSemaphoreCreateCounting(RL_ENV_MAX_MUTEX_COUNT, count);
     if (*lock)
     {
         return 0;
@@ -335,9 +354,9 @@ void env_delete_mutex(void *lock)
 void env_lock_mutex(void *lock)
 {
     SemaphoreHandle_t xSemaphore = (SemaphoreHandle_t)lock;
-    if (!env_in_isr())
+    if (env_in_isr() == 0)
     {
-        xSemaphoreTake(xSemaphore, portMAX_DELAY);
+        (void)xSemaphoreTake(xSemaphore, portMAX_DELAY);
     }
 }
 
@@ -349,7 +368,7 @@ void env_lock_mutex(void *lock)
 void env_unlock_mutex(void *lock)
 {
     SemaphoreHandle_t xSemaphore = (SemaphoreHandle_t)lock;
-    if (!env_in_isr())
+    if (env_in_isr() == 0)
     {
         xSemaphoreGive(xSemaphore);
     }
@@ -376,7 +395,9 @@ int env_create_sync_lock(void **lock, int state)
 void env_delete_sync_lock(void *lock)
 {
     if (lock)
+    {
         env_delete_mutex(lock);
+    }
 }
 
 /*!
@@ -396,7 +417,7 @@ void env_acquire_sync_lock(void *lock)
     }
     else
     {
-        xSemaphoreTake(xSemaphore, portMAX_DELAY);
+        (void)xSemaphoreTake(xSemaphore, portMAX_DELAY);
     }
 }
 
@@ -440,7 +461,7 @@ void env_sleep_msec(int num_msec)
  */
 void env_register_isr(int vector_id, void *data)
 {
-    assert(vector_id < ISR_COUNT);
+    RL_ASSERT(vector_id < ISR_COUNT);
     if (vector_id < ISR_COUNT)
     {
         isr_table[vector_id].data = data;
@@ -456,7 +477,7 @@ void env_register_isr(int vector_id, void *data)
  */
 void env_unregister_isr(int vector_id)
 {
-    assert(vector_id < ISR_COUNT);
+    RL_ASSERT(vector_id < ISR_COUNT);
     if (vector_id < ISR_COUNT)
     {
         isr_table[vector_id].data = NULL;
@@ -468,7 +489,7 @@ void env_unregister_isr(int vector_id)
  *
  * Enables the given interrupt
  *
- * @param vector_id   - interrupt vector number
+ * @param vector_id   - virtual interrupt vector number
  */
 
 void env_enable_interrupt(unsigned int vector_id)
@@ -481,7 +502,7 @@ void env_enable_interrupt(unsigned int vector_id)
  *
  * Disables the given interrupt
  *
- * @param vector_id   - interrupt vector number
+ * @param vector_id   - virtual interrupt vector number
  */
 
 void env_disable_interrupt(unsigned int vector_id)
@@ -544,7 +565,7 @@ unsigned long long env_get_timestamp(void)
 void env_isr(int vector)
 {
     struct isr_info *info;
-    assert(vector < ISR_COUNT);
+    RL_ASSERT(vector < ISR_COUNT);
     if (vector < ISR_COUNT)
     {
         info = &isr_table[vector];
@@ -559,7 +580,7 @@ void env_isr(int vector)
  *
  * @param queue -  pointer to created queue
  * @param length -  maximum number of elements in the queue
- * @param item_size - queue element size in bytes
+ * @param element_size - queue element size in bytes
  *
  * @return - status of function execution
  */
@@ -655,4 +676,26 @@ int env_get_queue(void *queue, void *msg, int timeout_ms)
         }
     }
     return 0;
+}
+
+/*!
+ * env_get_current_queue_size
+ *
+ * Get current queue size.
+ *
+ * @param queue - queue pointer
+ *
+ * @return - Number of queued items in the queue
+ */
+
+int env_get_current_queue_size(void *queue)
+{
+    if (env_in_isr())
+    {
+        return(uxQueueMessagesWaitingFromISR(queue));
+    }
+    else
+    {
+        return(uxQueueMessagesWaiting(queue));
+    }
 }

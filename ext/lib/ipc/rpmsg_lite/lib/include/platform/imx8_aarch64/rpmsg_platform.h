@@ -1,7 +1,6 @@
 /*
- * Copyright (c) 2014, Mentor Graphics Corporation
  * Copyright (c) 2016 Freescale Semiconductor, Inc.
- * Copyright 2016 NXP
+ * Copyright 2016-2019 NXP
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -29,67 +28,48 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-/**************************************************************************
- * FILE NAME
- *
- *       rpmsg_compiler.h
- *
- * DESCRIPTION
- *
- *       This file defines compiler-specific macros.
- *
- ***************************************************************************/
-#ifndef _RPMSG_COMPILER_H_
-#define _RPMSG_COMPILER_H_
+#ifndef _RPMSG_PLATFORM_H
+#define _RPMSG_PLATFORM_H
 
-/* IAR ARM build tools */
-#if defined(__ICCARM__)
+#include <pthread.h>
 
-#include <intrinsics.h>
+typedef struct rpmsg_platform_init_data {
+	unsigned int mu_base;   /* MU base address */
+	unsigned int mu_irq;    /* MU IRQ */
+} rpmsg_platform_init_data_t;
 
-#define MEM_BARRIER() __DSB()
-
-#ifndef RL_PACKED_BEGIN
-#define RL_PACKED_BEGIN __packed
+#ifndef VRING_ALIGN
+#define VRING_ALIGN (0x1000)
 #endif
 
-#ifndef RL_PACKED_END
-#define RL_PACKED_END
+/* contains pool of descriptors and two circular buffers */
+#ifndef VRING_SIZE
+#define VRING_SIZE (0x8000)
 #endif
 
-/* ARM GCC */
-#elif defined(__CC_ARM) || (defined (__ARMCC_VERSION) && (__ARMCC_VERSION >= 6010050))
+/* size of shared memory + 2*VRING size */
+#define RL_VRING_OVERHEAD (2 * VRING_SIZE)
 
-#if (defined (__ARMCC_VERSION) && (__ARMCC_VERSION >= 6010050))
-#include <arm_compat.h>
-#endif
+/* platform interrupt related functions */
+int platform_init_interrupt(int vector_id, void *isr_data);
+int platform_deinit_interrupt(int vector_id);
+int platform_interrupt_enable(unsigned int vector_id);
+int platform_interrupt_disable(unsigned int vector_id);
+int platform_in_isr(void);
+void platform_notify(void *platform_context, int vector_id);
 
-#define MEM_BARRIER() __schedule_barrier()
+/* platform low-level time-delay (busy loop) */
+void platform_time_delay(int num_msec);
 
-#ifndef RL_PACKED_BEGIN
-#define RL_PACKED_BEGIN _Pragma("pack(1U)")
-#endif
+/* platform memory functions */
+void platform_map_mem_region(unsigned int va, unsigned int pa, unsigned int size, unsigned int flags);
+void platform_cache_all_flush_invalidate(void);
+void platform_cache_disable(void);
+unsigned long platform_vatopa(void *addr);
+void *platform_patova(unsigned long addr);
 
-#ifndef RL_PACKED_END
-#define RL_PACKED_END _Pragma("pack()")
-#endif
+/* platform init/deinit */
+int platform_init(void **platform_context, void *env_context, void *platform_init);
+int platform_deinit(void *platform_context);
 
-/* GNUC */
-#elif defined(__GNUC__)
-
-#define MEM_BARRIER() asm volatile("dsb" : : : "memory")
-
-#ifndef RL_PACKED_BEGIN
-#define RL_PACKED_BEGIN
-#endif
-
-#ifndef RL_PACKED_END
-#define RL_PACKED_END __attribute__((__packed__))
-#endif
-
-#else
-/* There is no default definition here to avoid wrong structures packing in case of not supported compiler */
-#error Please implement the structure packing macros for your compiler here!
-#endif
-
-#endif /* _RPMSG_COMPILER_H_ */
+#endif /* _RPMSG_PLATFORM_H */

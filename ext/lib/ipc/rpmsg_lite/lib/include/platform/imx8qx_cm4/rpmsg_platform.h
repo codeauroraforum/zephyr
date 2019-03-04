@@ -1,6 +1,6 @@
 /*
- * Copyright (c) 2016 Freescale Semiconductor, Inc.
- * Copyright 2016 NXP
+ * Copyright (c) 2017 NXP Semiconductor, Inc.
+ * Copyright 2017 NXP
  * All rights reserved.
  *
  *
@@ -32,8 +32,9 @@
 #define RL_GET_LINK_ID(id) (((id)&0xFFFFFFFE) >> 1)
 #define RL_GET_Q_ID(id) ((id)&0x1)
 
-#define RL_PLATFORM_IMX6SX_M4_LINK_ID (0)
-#define RL_PLATFORM_HIGHEST_LINK_ID (0)
+#define RL_PLATFORM_IMX8QX_CM4_SRTM_LINK_ID (0)
+#define RL_PLATFORM_IMX8QX_CM4_USER_LINK_ID (1)
+#define RL_PLATFORM_HIGHEST_LINK_ID (15)
 
 /* platform interrupt related functions */
 int platform_init_interrupt(int vector_id, void *isr_data);
@@ -56,6 +57,5 @@ void *platform_patova(unsigned long addr);
 /* platform init/deinit */
 int platform_init(void);
 int platform_deinit(void);
-void rpmsg_handler(void);
 
 #endif /* _RPMSG_PLATFORM_H */

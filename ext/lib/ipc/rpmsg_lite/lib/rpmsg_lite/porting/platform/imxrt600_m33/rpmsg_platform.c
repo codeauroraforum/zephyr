@@ -1,6 +1,6 @@
 /*
- * Copyright (c) 2016 Freescale Semiconductor, Inc.
- * Copyright 2016-2019 NXP
+ * Copyright (c) 2017 NXP Semiconductor, Inc.
+ * Copyright 2017-2019 NXP
  * All rights reserved.
  *
  *
@@ -13,7 +13,7 @@
 #include "rpmsg_env.h"
 
 #include "fsl_device_registers.h"
-#include "fsl_mailbox.h"
+#include "fsl_mu.h"
 
 #if defined(RL_USE_MCMGR_IPC_ISR_HANDLER) && (RL_USE_MCMGR_IPC_ISR_HANDLER == 1)
 #include "mcmgr.h"
@@ -22,6 +22,12 @@
 #if defined(RL_USE_ENVIRONMENT_CONTEXT) && (RL_USE_ENVIRONMENT_CONTEXT == 1)
 #error "This RPMsg-Lite port requires RL_USE_ENVIRONMENT_CONTEXT set to 0"
 #endif
+
+#define APP_MU_IRQ_PRIORITY (3U)
+
+/* The MU instance used for CM33 and DSP core communication */
+#define APP_MU MUA
+#define APP_MU_IRQn MU_A_IRQn
 
 static int isr_counter = 0;
 static int disable_counter = 0;
@@ -33,35 +39,24 @@ static void mcmgr_event_handler(uint16_t vring_idx, void *context)
     env_isr(vring_idx);
 }
 #else
-void MAILBOX_IRQHandler(void)
+void MU_A_IRQHandler(void)
 {
-    mailbox_cpu_id_t cpu_id;
-#if defined(FSL_FEATURE_MAILBOX_SIDE_A)
-    cpu_id = kMAILBOX_CM4;
-#else
-    cpu_id = kMAILBOX_CM0Plus;
-#endif
+    uint32_t channel;
 
-    uint32_t value = MAILBOX_GetValue(MAILBOX, cpu_id);
-
-    if (value & 0x01)
+    if (((1U << 27U) >> RPMSG_MU_CHANNEL) & MU_GetStatusFlags(APP_MU))
     {
-        MAILBOX_ClearValueBits(MAILBOX, cpu_id, 0x01);
-        env_isr(0);
-    }
-    if (value & 0x02)
-    {
-        MAILBOX_ClearValueBits(MAILBOX, cpu_id, 0x02);
-        env_isr(1);
+        channel = MU_ReceiveMsgNonBlocking(APP_MU, RPMSG_MU_CHANNEL); /* Read message from RX register. */
+        env_isr(RL_GET_VQ_ID(RL_PLATFORM_LPC6324_M33_DSP_LINK_ID,RL_GET_Q_ID(channel >> 16)));
     }
 
-    /* Add for ARM errata 838869, affects Cortex-M4, Cortex-M4F Store immediate overlapping
-      exception return operation might vector to incorrect interrupt */
+/* Add for ARM errata 838869, affects Cortex-M4, Cortex-M4F Store immediate overlapping
+  exception return operation might vector to incorrect interrupt */
 #if defined __CORTEX_M && (__CORTEX_M == 4U)
     __DSB();
 #endif
 }
 #endif
+
 
 void platform_global_isr_disable(void)
 {
@@ -74,6 +69,7 @@ void platform_global_isr_enable(void)
     __asm volatile("cpsie i");
 }
 
+
 int platform_init_interrupt(unsigned int vector_id, void *isr_data)
 {
     /* Register ISR to environment layer */
@@ -83,12 +79,8 @@ int platform_init_interrupt(unsigned int vector_id, void *isr_data)
 
     RL_ASSERT(0 <= isr_counter);
     if (!isr_counter)
-    {
-#if defined(FSL_FEATURE_MAILBOX_SIDE_A)
-        NVIC_SetPriority(MAILBOX_IRQn, 5);
-#else
-        NVIC_SetPriority(MAILBOX_IRQn, 2);
-#endif
+	{
+        MU_EnableInterrupts(APP_MU, (1U << 27U) >> RPMSG_MU_CHANNEL);
     }
     isr_counter++;
 
@@ -106,7 +98,7 @@ int platform_deinit_interrupt(unsigned int vector_id)
     isr_counter--;
     if (!isr_counter)
     {
-        NVIC_DisableIRQ(MAILBOX_IRQn);
+        MU_DisableInterrupts(APP_MU, (1U << 27U) >> RPMSG_MU_CHANNEL);
     }
 
     /* Unregister ISR from environment layer */
@@ -119,29 +111,20 @@ int platform_deinit_interrupt(unsigned int vector_id)
 
 void platform_notify(unsigned int vector_id)
 {
+    uint32_t msg = (uint32_t)(vector_id << 16);
+
 #if defined(RL_USE_MCMGR_IPC_ISR_HANDLER) && (RL_USE_MCMGR_IPC_ISR_HANDLER == 1)
     env_lock_mutex(platform_lock);
-    MCMGR_TriggerEventForce(kMCMGR_RemoteRPMsgEvent, RL_GET_Q_ID(vector_id));
+    MCMGR_TriggerEvent(kMCMGR_RemoteRPMsgEvent, RL_GET_Q_ID(vector_id));
     env_unlock_mutex(platform_lock);
 #else
-/* Only single RPMsg-Lite instance (LINK_ID) is defined for this dual core device. Extend
-   this statement in case multiple instances of RPMsg-Lite are needed. */
     switch (RL_GET_LINK_ID(vector_id))
     {
-        case RL_PLATFORM_LPC5410x_M4_M0_LINK_ID:
+        case 0:
             env_lock_mutex(platform_lock);
-/* Write directly into the Mailbox register, no need to wait until the content is cleared
-   (consumed by the receiver side) because the same walue of the virtqueu ID is written
-   into this register when trigerring the ISR for the receiver side. The whole queue of
-   received buffers for associated virtqueue is handled in the ISR then. */
-#if defined(FSL_FEATURE_MAILBOX_SIDE_A)
-            MAILBOX_SetValueBits(MAILBOX, kMAILBOX_CM0Plus, (1 << RL_GET_Q_ID(vector_id)));
-#else
-            MAILBOX_SetValueBits(MAILBOX, kMAILBOX_CM4, (1 << RL_GET_Q_ID(vector_id)));
-#endif
+            MU_SendMsg(APP_MU, RPMSG_MU_CHANNEL, msg);
             env_unlock_mutex(platform_lock);
             return;
-
         default:
             return;
     }
@@ -205,7 +188,7 @@ int platform_interrupt_enable(unsigned int vector_id)
 
     if (!disable_counter)
     {
-        NVIC_EnableIRQ(MAILBOX_IRQn);
+        NVIC_EnableIRQ(APP_MU_IRQn);
     }
     platform_global_isr_enable();
     return (vector_id);
@@ -230,7 +213,7 @@ int platform_interrupt_disable(unsigned int vector_id)
        if counter is set - the interrupts are disabled */
     if (!disable_counter)
     {
-        NVIC_DisableIRQ(MAILBOX_IRQn);
+        NVIC_DisableIRQ(APP_MU_IRQn);
     }
     disable_counter++;
     platform_global_isr_enable();
@@ -297,14 +280,16 @@ void *platform_patova(unsigned long addr)
 int platform_init(void)
 {
 #if defined(RL_USE_MCMGR_IPC_ISR_HANDLER) && (RL_USE_MCMGR_IPC_ISR_HANDLER == 1)
-    mcmgr_status_t retval = kStatus_MCMGR_Error;
+    mcmgr_status_t retval;
     retval = MCMGR_RegisterEvent(kMCMGR_RemoteRPMsgEvent, mcmgr_event_handler, NULL);
     if(kStatus_MCMGR_Success != retval)
     {
         return -1;
     }
 #else
-    MAILBOX_Init(MAILBOX);
+    MU_Init(APP_MU);
+    NVIC_SetPriority(APP_MU_IRQn, APP_MU_IRQ_PRIORITY);
+    NVIC_EnableIRQ(APP_MU_IRQn);   
 #endif
 
     /* Create lock used in multi-instanced RPMsg */
@@ -323,19 +308,8 @@ int platform_init(void)
  */
 int platform_deinit(void)
 {
-/* Important for LPC54102 - do not deinit mailbox, if there
-   is a pending ISR on the other core! */
-#if defined(FSL_FEATURE_MAILBOX_SIDE_A)
-    while (0 != MAILBOX_GetValue(MAILBOX, kMAILBOX_CM0Plus))
-    {
-    }
-#else
-    while (0 != MAILBOX_GetValue(MAILBOX, kMAILBOX_CM4))
-    {
-    }
-#endif
 
-    MAILBOX_Deinit(MAILBOX);
+    MU_Deinit(APP_MU);
 
     /* Delete lock used in multi-instanced RPMsg */
     env_delete_mutex(platform_lock);
