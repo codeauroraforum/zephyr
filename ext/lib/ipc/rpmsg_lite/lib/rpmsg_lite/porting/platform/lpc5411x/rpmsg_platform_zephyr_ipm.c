@@ -55,10 +55,10 @@ void platform_ipm_callback(void *context, u32_t id, volatile void *data)
     }
 }
 
-int platform_init_interrupt(int vq_id, void *isr_data)
+int platform_init_interrupt(unsigned int vector_id, void *isr_data)
 {
     /* Register ISR to environment layer */
-    env_register_isr(vq_id, isr_data);
+    env_register_isr(vector_id, isr_data);
 
     env_lock_mutex(lock);
 
@@ -71,7 +71,7 @@ int platform_init_interrupt(int vq_id, void *isr_data)
     return 0;
 }
 
-int platform_deinit_interrupt(int vq_id)
+int platform_deinit_interrupt(unsigned int vector_id)
 {
     /* Prepare the MU Hardware */
     env_lock_mutex(lock);
@@ -84,20 +84,20 @@ int platform_deinit_interrupt(int vq_id)
     }
 
     /* Unregister ISR from environment layer */
-    env_unregister_isr(vq_id);
+    env_unregister_isr(vector_id);
 
     env_unlock_mutex(lock);
 
     return 0;
 }
 
-void platform_notify(int vq_id)
+void platform_notify(unsigned int vector_id)
 {
-    switch (RL_GET_LINK_ID(vq_id))
+    switch (RL_GET_LINK_ID(vector_id))
     {
         case RL_PLATFORM_LPC5411x_M4_M0_LINK_ID:
             env_lock_mutex(lock);
-            uint32_t data = (1 << RL_GET_Q_ID(vq_id));
+            uint32_t data = (1 << RL_GET_Q_ID(vector_id));
             assert(ipm_handle);
             ipm_send(ipm_handle, 0, 0, &data, sizeof(uint32_t));
             env_unlock_mutex(lock);
@@ -126,14 +126,14 @@ int platform_in_isr(void)
  *
  * Enable peripheral-related interrupt with passed priority and type.
  *
- * @param vq_id Vector ID that need to be converted to IRQ number
+ * @param vector_id Vector ID that need to be converted to IRQ number
  * @param trigger_type IRQ active level
  * @param trigger_type IRQ priority
  *
- * @return vq_id. Return value is never checked..
+ * @return vector_id. Return value is never checked..
  *
  */
-int platform_interrupt_enable(unsigned int vq_id)
+int platform_interrupt_enable(unsigned int vector_id)
 {
     assert(0 < disable_counter);
 
@@ -145,7 +145,7 @@ int platform_interrupt_enable(unsigned int vq_id)
         ipm_set_enabled(ipm_handle, 1);
     }
     __asm volatile("cpsie i");
-    return (vq_id);
+    return (vector_id);
 }
 
 /**
@@ -153,12 +153,12 @@ int platform_interrupt_enable(unsigned int vq_id)
  *
  * Disable peripheral-related interrupt.
  *
- * @param vq_id Vector ID that need to be converted to IRQ number
+ * @param vector_id Vector ID that need to be converted to IRQ number
  *
- * @return vq_id. Return value is never checked.
+ * @return vector_id. Return value is never checked.
  *
  */
-int platform_interrupt_disable(unsigned int vq_id)
+int platform_interrupt_disable(unsigned int vector_id)
 {
     assert(0 <= disable_counter);
 
@@ -172,7 +172,7 @@ int platform_interrupt_disable(unsigned int vq_id)
 
     disable_counter++;
     __asm volatile("cpsie i");
-    return (vq_id);
+    return (vector_id);
 }
 
 /**
