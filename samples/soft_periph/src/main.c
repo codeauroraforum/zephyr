@@ -18,7 +18,7 @@
 
 /* Defines*/
 
-#define GPIO_UART_PORT	GPIO_5_LABEL
+#define GPIO_UART_PORT	"GPIO_5"
 
 #define MAX_BAUD_RATE	(115200U)
 #define OVERSAMPLING	(4U)
@@ -396,8 +396,8 @@ static void counter_callback(struct device *dev, void *user_data)
 		if (next_rx_wr == rx_rd) {
 			overflow_count++;
 		} else {
-			gpio_port_read(gpio_dev,
-				       (u32_t *)&rx_buffer[next_rx_wr]);
+			gpio_read(gpio_dev, GPIO_ACCESS_BY_PORT, 0,
+				  (u32_t *)&rx_buffer[next_rx_wr]);
 			rx_wr = next_rx_wr;
 		}
 	}
@@ -415,7 +415,8 @@ static void counter_callback(struct device *dev, void *user_data)
 				return;
 			}
 
-			gpio_port_write(gpio_dev, tx_buffer[tx_rd]);
+			gpio_write(gpio_dev, GPIO_ACCESS_BY_PORT, 0,
+				   tx_buffer[tx_rd]);
 			tx_rd = (tx_rd + 1U) % TX_BUFFER_LEN;
 		}
 	}
@@ -534,7 +535,7 @@ static void tx_thread(void *p1, void *p2, void *p3)
 
 	printk("%s starting\n", __func__);
 
-	gpio_port_write(gpio_dev, 0xFFFFFFFFU);
+	gpio_write(gpio_dev, GPIO_ACCESS_BY_PORT, 0, 0xFFFFFFFFU);
 
 	while (1) {
 		buffer = &tx_buffer[tx_wr];
@@ -857,7 +858,7 @@ void main(void)
 		}
 	}
 
-	epit = device_get_binding(EPIT_1_LABEL);
+	epit = device_get_binding("EPIT_1");
 	if (!epit) {
 		printk("device_get_binding(EPIT) has failed\n");
 		return;
@@ -869,11 +870,11 @@ void main(void)
 		return;
 	}
 
-	ret = counter_set_alarm(epit, counter_callback,
-		(get_epit_clock_freq(EPIT1) / (base_baud_rate * OVERSAMPLING)) -
-								      1U, NULL);
+	ret = counter_set_top_value(epit, (get_epit_clock_freq(EPIT1) /
+				    (base_baud_rate * OVERSAMPLING)) - 1U,
+				    counter_callback, NULL);
 	if (ret) {
-		printk("counter_set_alarm has failed, %d\n", ret);
+		printk("counter_set_top_value has failed, %d\n", ret);
 		return;
 	}
 

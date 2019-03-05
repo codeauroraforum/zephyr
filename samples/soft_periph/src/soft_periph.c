@@ -9,30 +9,30 @@
 
 static struct gpio_pin_cfg gpios[] = {
 #ifdef CONFIG_GPIO_IMX_PORT_6
-	{.device_name = GPIO_6_LABEL, .port = 6U, .pin = 18U, .used = false},
-	{.device_name = GPIO_6_LABEL, .port = 6U, .pin = 19U, .used = false},
+	{.device_name = "GPIO_6", .port = 6U, .pin = 18U, .used = false},
+	{.device_name = "GPIO_6", .port = 6U, .pin = 19U, .used = false},
 #endif /* CONFIG_GPIO_IMX_PORT_6 */
 #ifdef CONFIG_GPIO_IMX_PORT_4
-	{.device_name = GPIO_4_LABEL, .port = 4U, .pin = 8U, .used = false},
+	{.device_name = "GPIO_4", .port = 4U, .pin = 8U, .used = false},
 #endif /* CONFIG_GPIO_IMX_PORT_4 */
 #ifdef CONFIG_GPIO_IMX_PORT_5
-	{.device_name = GPIO_5_LABEL, .port = 5U, .pin = 15U, .used = false},
-	{.device_name = GPIO_5_LABEL, .port = 5U, .pin = 14U, .used = false},
-	{.device_name = GPIO_5_LABEL, .port = 5U, .pin = 13U, .used = false},
-	{.device_name = GPIO_5_LABEL, .port = 5U, .pin = 12U, .used = false},
-	{.device_name = GPIO_5_LABEL, .port = 5U, .pin = 21U, .used = false},
+	{.device_name = "GPIO_5", .port = 5U, .pin = 15U, .used = false},
+	{.device_name = "GPIO_5", .port = 5U, .pin = 14U, .used = false},
+	{.device_name = "GPIO_5", .port = 5U, .pin = 13U, .used = false},
+	{.device_name = "GPIO_5", .port = 5U, .pin = 12U, .used = false},
+	{.device_name = "GPIO_5", .port = 5U, .pin = 21U, .used = false},
 #endif /* CONFIG_GPIO_IMX_PORT_5 */
 #ifdef CONFIG_GPIO_IMX_PORT_4
-	{.device_name = GPIO_4_LABEL, .port = 4U, .pin = 9U, .used = false},
+	{.device_name = "GPIO_4", .port = 4U, .pin = 9U, .used = false},
 #endif /* CONFIG_GPIO_IMX_PORT_4 */
 #ifdef CONFIG_GPIO_IMX_PORT_5
-	{.device_name = GPIO_5_LABEL, .port = 5U, .pin = 20U, .used = false},
-	{.device_name = GPIO_5_LABEL, .port = 5U, .pin = 18U, .used = false},
-	{.device_name = GPIO_5_LABEL, .port = 5U, .pin = 19U, .used = false},
+	{.device_name = "GPIO_5", .port = 5U, .pin = 20U, .used = false},
+	{.device_name = "GPIO_5", .port = 5U, .pin = 18U, .used = false},
+	{.device_name = "GPIO_5", .port = 5U, .pin = 19U, .used = false},
 #endif /* CONFIG_GPIO_IMX_PORT_5 */
 #ifdef CONFIG_GPIO_IMX_PORT_4
-	{.device_name = GPIO_4_LABEL, .port = 4U, .pin = 4U, .used = false},
-	{.device_name = GPIO_4_LABEL, .port = 4U, .pin = 6U, .used = false},
+	{.device_name = "GPIO_4", .port = 4U, .pin = 4U, .used = false},
+	{.device_name = "GPIO_4", .port = 4U, .pin = 6U, .used = false},
 #endif /* CONFIG_GPIO_IMX_PORT_4 */
 };
 
