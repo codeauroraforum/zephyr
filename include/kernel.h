@@ -4006,8 +4006,7 @@ struct k_mem_pool {
  * @req K-MPOOL-001
  */
 #define K_MEM_POOL_DEFINE(name, minsz, maxsz, nmax, align)		\
-	char __attribute__((section(".noinit_heap_mem_pool"))) __aligned(align)\
-				_mpool_buf_##name[_ALIGN4(maxsz * nmax) \
+	char __aligned(align) _mpool_buf_##name[_ALIGN4(maxsz * nmax)	\
 				  + _MPOOL_BITS_SIZE(maxsz, minsz, nmax)]; \
 	struct sys_mem_pool_lvl _mpool_lvls_##name[_MPOOL_LVLS(maxsz, minsz)]; \
 	struct k_mem_pool name __in_section(_k_mem_pool, static, name) = { \
