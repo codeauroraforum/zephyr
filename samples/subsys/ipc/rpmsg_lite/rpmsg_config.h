@@ -15,7 +15,7 @@
 
 #define RL_MS_PER_INTERVAL (1)
 
-#ifdef CONFIG_SOC_SERIES_IMX_6X_M4
+#if defined(CONFIG_SOC_SERIES_IMX_6X_M4) || defined(CONFIG_SOC_SERIES_IMX7_M4)
 #define RL_BUFFER_COUNT (256)
 #endif
 
