@@ -14,6 +14,9 @@ target_sources(app PRIVATE $ENV{ZEPHYR_BASE}/ext/lib/ipc/rpmsg_lite/lib/rpmsg_li
 elseif(CONFIG_SOC_SERIES_IMX_6X_M4)
 target_include_directories(app PRIVATE $ENV{ZEPHYR_BASE}/ext/lib/ipc/rpmsg_lite/lib/include/platform/imx6sx_m4)
 target_sources(app PRIVATE $ENV{ZEPHYR_BASE}/ext/lib/ipc/rpmsg_lite/lib/rpmsg_lite/porting/platform/imx6sx_m4/rpmsg_platform_zephyr_ipm.c)
+elseif(CONFIG_SOC_SERIES_IMX7_M4)
+target_include_directories(app PRIVATE $ENV{ZEPHYR_BASE}/ext/lib/ipc/rpmsg_lite/lib/include/platform/imx7d_m4)
+target_sources(app PRIVATE $ENV{ZEPHYR_BASE}/ext/lib/ipc/rpmsg_lite/lib/rpmsg_lite/porting/platform/imx7d_m4/rpmsg_platform_zephyr_ipm.c)
 endif()
 
 target_sources(app PRIVATE src/main_remote.c)
