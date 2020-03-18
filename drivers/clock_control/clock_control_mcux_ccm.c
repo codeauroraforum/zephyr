@@ -87,6 +87,12 @@ static int mcux_ccm_get_subsys_rate(struct device *dev,
 				(CLOCK_GetDiv(kCLOCK_Usdhc2Div) + 1U);
 		break;
 #endif
+
+#ifdef CONFIG_DMA_IMX_RT
+	case IMX_CCM_EDMA_CLK:
+		*rate = CLOCK_GetIpgFreq();	
+		break;
+#endif
 	}
 
 	return 0;

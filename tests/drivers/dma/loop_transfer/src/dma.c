@@ -14,24 +14,31 @@
 #include <string.h>
 
 /* in millisecond */
-#define SLEEPTIME  1000
+#define SLEEPTIME 1000
 
 #define TRANSFER_LOOPS (5)
 #define RX_BUFF_SIZE (50)
-
-static const char tx_data[] = "The quick brown fox jumps over the lazy dog";
-static char rx_data[TRANSFER_LOOPS][RX_BUFF_SIZE] = {{ 0 } };
+#if CONFIG_NOCACHE_MEMORY
+static __aligned(16) char tx_data[50] __used
+	__attribute__((__section__(".nocache")));
+static const char TX_DATA[] = "The quick brown fox jumps over the lazy dog";
+static __aligned(16) char rx_data[TRANSFER_LOOPS][RX_BUFF_SIZE] __used
+	__attribute__((__section__(".nocache.dma")));
+#else
+static const __aligned(16) char tx_data[] =
+	"The quick brown fox jumps over the lazy dog";
+static __aligned(16) char rx_data[TRANSFER_LOOPS][RX_BUFF_SIZE] = { { 0 } };
+#endif
 
 #define DMA_DEVICE_NAME "DMA_0"
 
 volatile u8_t transfer_count;
-static struct dma_config dma_cfg = {0};
-static struct dma_block_config dma_block_cfg = {0};
+static struct dma_config dma_cfg = { 0 };
+static struct dma_block_config dma_block_cfg = { 0 };
 
 static void test_transfer(struct device *dev, u32_t id)
 {
 	int ret;
-
 	transfer_count++;
 	if (transfer_count < TRANSFER_LOOPS) {
 		dma_block_cfg.block_size = strlen(tx_data);
@@ -65,10 +72,15 @@ void main(void)
 {
 	struct device *dma;
 	static u32_t chan_id;
+	struct dma_status stat;
 
 	printk("DMA memory to memory transfer started on %s\n",
-		DMA_DEVICE_NAME);
+	       DMA_DEVICE_NAME);
 	printk("Preparing DMA Controller\n");
+
+#if CONFIG_NOCACHE_MEMORY
+	memcpy(tx_data, TX_DATA, sizeof(TX_DATA));
+#endif
 
 	dma = device_get_binding(DMA_DEVICE_NAME);
 	if (!dma) {
@@ -87,8 +99,10 @@ void main(void)
 	dma_cfg.head_block = &dma_block_cfg;
 
 	chan_id = 0U;
-
+	transfer_count = 0;
 	printk("Starting the transfer and waiting for 1 second\n");
+	printk("TX data: %s\n", tx_data);
+	printk("block_size %d\n", strlen(tx_data));
 	dma_block_cfg.block_size = strlen(tx_data);
 	dma_block_cfg.source_address = (u32_t)tx_data;
 	dma_block_cfg.dest_address = (u32_t)rx_data[transfer_count];
@@ -104,6 +118,7 @@ void main(void)
 	}
 
 	k_sleep(SLEEPTIME);
+	dma_get_status(dma, chan_id, &stat);
 
 	if (transfer_count < TRANSFER_LOOPS) {
 		transfer_count = TRANSFER_LOOPS;

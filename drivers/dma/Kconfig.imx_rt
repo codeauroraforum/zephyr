@@ -1,0 +1,22 @@
+# DMA configuration options
+
+# Copyright (c) 2016 Intel Corporation
+# Copyright (c) 2019 Song Qiang <songqiang1304521@gmail.com>
+# SPDX-License-Identifier: Apache-2.0
+
+config DMA_IMX_RT
+	bool "Enable IMX RT DMA driver"
+	depends on SOC_SERIES_IMX_RT
+	help
+	  DMA driver for IMX RT series SoCs.
+
+if DMA_IMX_RT
+
+config DMA_TCD_QUEUE_SIZE
+	int "number of TCD in a queue for SG mode"
+	default 2
+	help
+	  number of TCD in a queue for SG mode
+
+
+endif # DMA_IMX_RT

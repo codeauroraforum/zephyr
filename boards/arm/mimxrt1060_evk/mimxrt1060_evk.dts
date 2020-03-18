@@ -134,3 +134,7 @@ arduino_serial: &uart3 {};
 &usbd1 {
 	status = "okay";
 };
+
+&edma0 {
+	status = "okay";
+};

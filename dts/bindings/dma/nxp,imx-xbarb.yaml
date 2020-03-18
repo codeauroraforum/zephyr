@@ -1,0 +1,31 @@
+# Copyright (c) 2020, NXP
+# SPDX-License-Identifier: Apache-2.0
+
+description: NXP IMX XBARB controller
+
+compatible: "nxp,imx-xbarb"
+
+include: base.yaml
+
+properties:
+    reg:
+      required: true
+
+    "#xbarb-cells":
+      type: int
+      required: true
+      description: Number of items to expect in a xbarb
+      const: 2
+
+# Parameter syntax of NXP follows the client dts syntax
+# in the Linux kernel declared in
+# https://git.kernel.org/pub/scm/linux/kernel/git/devicetree/devicetree-rebasing.git/plain/Bindings/dma/stm32-dma.txt
+#
+# in0: xbara in 0
+# in1: xbara in 1
+
+
+xbarb-cells:
+  - in0
+  - in2
+
