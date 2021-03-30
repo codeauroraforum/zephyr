@@ -14,6 +14,9 @@ config XTAL_SYS_CLK_HZ
 config SYSOSC_SETTLING_US
 	default 260
 
+config FLASH_MCUX_FLEXSPI_NOR
+	default y if FLASH
+
 if PINMUX_MCUX_LPC
 
 config PINMUX_MCUX_LPC_PORT0

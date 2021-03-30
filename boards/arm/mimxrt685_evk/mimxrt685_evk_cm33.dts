@@ -93,6 +93,41 @@ arduino_spi: &flexcomm5 {
 	dma-names = "rx", "tx";
 };
 
+&flexspi {
+	status = "okay";
+	ahb-prefetch;
+	combination-mode;
+	ahb-cacheable;
+	ahb-bufferable;
+	rx-clock-source = <0>;
+	reg = <0x50134000 0x4000>, <0x18000000 DT_SIZE_M(128)>;
+	mx25um51345g: mx25um51345g@0 {
+		compatible = "nxp,imx-flexspi-nor";
+		size = <536870912>;
+		label = "MX25UM51345G";
+		reg = <2>;
+		spi-max-frequency = <200000000>;
+		cs-interval = <2>;
+		cs-setup-time = <3>;
+		cs-hold-time = <3>;
+		data-valid-time = <2>;
+		ahb-write-wait-interval = <0>;
+		status = "okay";
+		jedec-id = [c2 81 3a];
+	
+	partitions {
+			compatible = "fixed-partitions";
+			#address-cells = <1>;
+			#size-cells = <1>;
+	
+			storage_partition: partition@0 {
+				label = "storage";
+				reg = <0x00000000 DT_SIZE_M(8)>;
+			};
+		};
+	};
+};
+
 &gpio0 {
 	status = "okay";
 };

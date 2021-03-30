@@ -26,8 +26,8 @@ void disable_mpu_rasr_xn(void)
 	 */
 	for (index = 0U; index < 8; index++) {
 		MPU->RNR = index;
-		if (MPU->RASR & MPU_RASR_XN_Msk) {
-			MPU->RASR ^= MPU_RASR_XN_Msk;
+		if (MPU->RBAR & MPU_RBAR_XN_Msk) {
+			MPU->RBAR ^= MPU_RBAR_XN_Msk;
 		}
 	}
 
