@@ -25,3 +25,4 @@ supported:
   - i2c
   - i2s
   - spi
+  - usb_device

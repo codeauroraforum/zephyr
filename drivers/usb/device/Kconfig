@@ -98,6 +98,21 @@ config USB_DC_NXP_EHCI
 	help
 	  Kinetis and RT EHCI USB Device Controller Driver.
 
+config USB_DC_NXP_LPCIP3511HS
+	bool "Kinetis and RT EHCI USB Device Controller Driver"
+	depends on HAS_MCUX_USB_LPCIP3511HS
+	select USB_DEVICE_DRIVER
+	help
+	  RTxxx EHCI USB Device Controller Driver.
+
+config USB_DC_NXP_LPCIP3511FS
+	bool "Kinetis and RT EHCI USB Device Controller Driver"
+	depends on HAS_MCUX_USB_LPCIP3511FS
+	select USB_DEVICE_DRIVER
+	select NOCACHE_MEMORY if HAS_MCUX_CACHE
+	help
+	  RTxxx EHCI USB Device Controller Driver.
+
 module = USB_DRIVER
 module-str = usb driver
 source "subsys/logging/Kconfig.template.log_config"

@@ -23,6 +23,7 @@ config SOC_MIMXRT685S_CM33
 	select HAS_MCUX_LPC_DMA
 	select HAS_MCUX_OS_TIMER
 	select INIT_SYS_PLL
+	select HAS_MCUX_USB_LPCIP3511HS
 
 endchoice
 

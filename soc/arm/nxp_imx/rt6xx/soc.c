@@ -25,6 +25,12 @@
 #include <fsl_common.h>
 #include <fsl_device_registers.h>
 
+#if CONFIG_USB_DC_NXP_LPCIP3511HS
+#include "usb_phy.h"
+#include "usb_dc_mcux.h"
+#endif
+
+
 #define SYSTEM_IS_XIP_FLEXSPI() \
 	((((uint32_t)nxp_rt600_init >= 0x08000000U) &&		\
 	  ((uint32_t)nxp_rt600_init < 0x10000000U)) ||		\
@@ -48,6 +54,21 @@ const clock_audio_pll_config_t g_audioPllConfig = {
 	.audio_pll_mult = kCLOCK_AudioPllMult22
 };
 #endif
+
+#if CONFIG_USB_DC_NXP_LPCIP3511HS
+/* USB PHY condfiguration */
+#define BOARD_USB_PHY_D_CAL (0x0CU)
+#define BOARD_USB_PHY_TXCAL45DP (0x06U)
+#define BOARD_USB_PHY_TXCAL45DM (0x06U)
+#endif
+
+#if CONFIG_USB_DC_NXP_LPCIP3511HS
+usb_phy_config_struct_t usbPhyConfig = {
+		BOARD_USB_PHY_D_CAL, BOARD_USB_PHY_TXCAL45DP, BOARD_USB_PHY_TXCAL45DM,
+};
+#endif
+
+
 
 #ifdef CONFIG_NXP_IMX_RT6XX_BOOT_HEADER
 extern char z_main_stack[];
@@ -150,6 +171,13 @@ static ALWAYS_INLINE void clock_init(void)
 	CLOCK_SetClkDiv(kCLOCK_DivPllFrgClk, 12U);
 
 	CLOCK_AttachClk(kSFRO_to_FLEXCOMM0);
+
+#if CONFIG_USB_DC_NXP_LPCIP3511HS
+	CLOCK_EnableUsbhsDeviceClock();
+	CLOCK_EnableUsbhsPhyClock();
+	USB_EhciPhyInit(kUSB_ControllerEhci0, CLK_XTAL_OSC_CLK, &usbPhyConfig);
+#endif
+
 
 #if DT_NODE_HAS_COMPAT_STATUS(DT_NODELABEL(flexcomm2), nxp_lpc_i2c, okay)
 	CLOCK_AttachClk(kSFRO_to_FLEXCOMM2);

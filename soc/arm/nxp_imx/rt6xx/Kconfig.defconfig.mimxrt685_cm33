@@ -54,4 +54,8 @@ config SYS_CLOCK_HW_CYCLES_PER_SEC
 
 endif # CORTEX_M_SYSTICK
 
+config USB_DC_NXP_LPCIP3511HS
+	default y
+	depends on USB
+
 endif # SOC_MIMXRT685S_CM33
