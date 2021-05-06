@@ -5,7 +5,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#define DT_DRV_COMPAT nxp_kinetis_usbd
+#define DT_DRV_COMPAT nxp_lpc_usbd
 
 #include <soc.h>
 #include <string.h>
@@ -27,7 +27,29 @@ LOG_MODULE_REGISTER(usb_dc_mcux_lpcip3511);
 #define CONTROLLER_ID kUSB_ControllerEhci0
 
 static void usb_isr_handler(void);
+
+#if ((defined(USB_DEVICE_CONFIG_EHCI)) && (USB_DEVICE_CONFIG_EHCI > 0U))
+/*!
+ * @brief Device EHCI ISR function.
+ *
+ * The function is the EHCI interrupt service routine.
+ *
+ * @param[in] deviceHandle The device handle got from #USB_DeviceInit.
+ */
 extern void USB_DeviceEhciIsrFunction(void *deviceHandle);
+#endif
+
+#if (((defined(USB_DEVICE_CONFIG_LPCIP3511FS)) && (USB_DEVICE_CONFIG_LPCIP3511FS > 0U)) || \
+	((defined(USB_DEVICE_CONFIG_LPCIP3511HS)) && (USB_DEVICE_CONFIG_LPCIP3511HS > 0U)))
+/*!
+ * @brief Device LPC USB ISR function.
+ *
+ * The function is the LPC USB interrupt service routine.
+ *
+ * @param[in] deviceHandle The device handle got from #USB_DeviceInit.
+ */
+extern void USB_DeviceLpcIp3511IsrFunction(void *deviceHandle);
+#endif
 
 /* the setup transfer state */
 #define SETUP_DATA_STAGE_DONE	(0)
@@ -792,5 +814,5 @@ void USB_DeviceNotificationTrigger(void *handle, void *msg)
 
 static void usb_isr_handler(void)
 {
-	USB_DeviceEhciIsrFunction(&dev_data);
+	USB_DeviceLpcIp3511IsrFunction(&dev_data);
 }

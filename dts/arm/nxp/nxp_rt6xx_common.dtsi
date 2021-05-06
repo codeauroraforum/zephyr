@@ -172,7 +172,7 @@
 		interrupt-names = "usb_otg";
 		num-bidir-endpoints = <8>;
 		status = "disabled";
-		abel = "USBD";
+		label = "USBD";
 	};
 
 	hs_lspi: spi@126000 {
