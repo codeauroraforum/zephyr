@@ -133,23 +133,26 @@ void bt_avdtp_media_l2cap_connected(struct bt_l2cap_chan *chan)
 	lsep->seid_state = AVDTP_OPEN;
 	if ((session->req != NULL) && (session->req->func != NULL)) {
 		struct bt_avdtp_req *req = session->req;
+
 		if (!chan) {
 			BT_ERR("Invalid AVDTP chan");
 			OPEN_REQ(session->req)->status = -EIO;
 			session->req = NULL;
 			req->func(req);
 			return;
-		} else {
-			OPEN_REQ(session->req)->status = 0;
-			session->req = NULL;
-			req->func(req);
 		}
+
+		OPEN_REQ(session->req)->status = 0;
+		session->req = NULL;
+		req->func(req);
 	}
 }
 
 void bt_avdtp_media_l2cap_disconnected(struct bt_l2cap_chan *chan)
 {
-	struct bt_avdtp_seid_lsep *lsep = CONTAINER_OF(chan, struct bt_avdtp_seid_lsep, media_br_chan.chan);
+	struct bt_avdtp_seid_lsep *lsep =
+		CONTAINER_OF(chan, struct bt_avdtp_seid_lsep, media_br_chan.chan);
+
 	BT_DBG("chan %p", chan);
 	chan->conn = NULL;
 	if (lsep->seid_state > AVDTP_OPENING) {
@@ -164,7 +167,9 @@ void bt_avdtp_media_l2cap_encrypt_changed(struct bt_l2cap_chan *chan, uint8_t st
 int bt_avdtp_media_l2cap_recv(struct bt_l2cap_chan *chan, struct net_buf *buf)
 {
 	/* media data is received */
-	struct bt_avdtp_seid_lsep *lsep = CONTAINER_OF(chan, struct bt_avdtp_seid_lsep, media_br_chan.chan);
+	struct bt_avdtp_seid_lsep *lsep =
+		CONTAINER_OF(chan, struct bt_avdtp_seid_lsep, media_br_chan.chan);
+
 	if (lsep->media_data_cb != NULL) {
 		lsep->media_data_cb(lsep, buf);
 	}
@@ -260,7 +265,8 @@ static void avdtp_discover_handler(struct bt_avdtp *session,
 
 			lsep = lseps;
 			while (lsep != NULL) {
-				dest = (struct bt_avdtp_seid_info *)net_buf_add(rsp_buf, sizeof (struct bt_avdtp_seid_info));
+				dest = (struct bt_avdtp_seid_info *)
+					net_buf_add(rsp_buf, sizeof(struct bt_avdtp_seid_info));
 				*dest = lsep->sep;
 				lsep = lsep->next;
 			}
@@ -274,6 +280,7 @@ static void avdtp_discover_handler(struct bt_avdtp *session,
 		}
 	} else {
 		struct bt_avdtp_req *req = session->req;
+
 		if ((session->req == NULL) || (session->req->func == NULL)) {
 			return;
 		}
@@ -331,7 +338,8 @@ static void avdtp_get_capabilities_handler(struct bt_avdtp *session,
 				return;
 			}
 
-			err = session->ops->get_capabilities_ind(session, lsep, rsp_buf, &error_code);
+			err = session->ops->get_capabilities_ind(session,
+				lsep, rsp_buf, &error_code);
 			if ((err < 0) || (error_code != 0)) {
 				net_buf_unref(rsp_buf);
 				if (error_code == 0) {
@@ -360,6 +368,7 @@ static void avdtp_get_capabilities_handler(struct bt_avdtp *session,
 		}
 	} else {
 		struct bt_avdtp_req *req = session->req;
+
 		if ((session->req == NULL) || (session->req->func == NULL)) {
 			return;
 		}
@@ -415,7 +424,8 @@ static void avdtp_process_configuration(struct bt_avdtp *session,
 			} else {
 				/* INT Stream Endpoint ID */
 				net_buf_pull_u8(buf);
-				err = session->ops->set_configuration_ind(session, lsep, buf, &error_code);
+				err = session->ops->set_configuration_ind(session,
+						lsep, buf, &error_code);
 				if (err < 0) {
 					BT_DBG("set configuration err code:%d", error_code);
 				}
@@ -461,6 +471,7 @@ static void avdtp_process_configuration(struct bt_avdtp *session,
 	} else {
 		struct bt_avdtp_req *avdtp_req = session->req;
 		struct bt_avdtp_set_configuration_params *set_config;
+
 		if ((session->req == NULL) || (session->req->func == NULL)) {
 			return;
 		}
@@ -488,7 +499,7 @@ static void avdtp_set_configuration_handler(struct bt_avdtp *session,
 static void avdtp_get_configuration_handler(struct bt_avdtp *session,
 			struct net_buf *buf, uint8_t msg_type, uint8_t tid)
 {
-	//todo
+	/* todo */
 }
 
 static void avdtp_re_configure_handler(struct bt_avdtp *session,
@@ -586,9 +597,9 @@ static void avdtp_open_handler(struct bt_avdtp *session,
 			if (!avdtp_media_connect(session, open_param->lsep)) {
 				net_buf_unref(buf);
 				return;
-			} else {
-				OPEN_REQ(avdtp_req)->status = -EIO;
 			}
+
+			OPEN_REQ(avdtp_req)->status = -EIO;
 		} else {
 			/* BT_AVDTP_GEN_REJECT, BT_AVDTP_REJECT */
 			OPEN_REQ(avdtp_req)->status = -EIO;
@@ -675,9 +686,10 @@ static void avdtp_start_handler(struct bt_avdtp *session,
 		}
 	} else {
 		struct bt_avdtp_req *req = session->req;
+
 		if ((session->req == NULL) || (session->req->func == NULL)) {
 			return;
-		}		
+		}
 		k_work_cancel_delayable(&session->req->timeout_work);
 		if (msg_type == BT_AVDTP_ACCEPT) {
 			START_REQ(session->req)->status = 0;
@@ -973,8 +985,7 @@ static void avdtp_timeout(struct k_work *work)
 
 	/* add process code */
 	/* Gracefully Disconnect the Signalling and streaming L2cap chann*/
-	if (AVDTP_KWORK(work))
-	{
+	if (AVDTP_KWORK(work)) {
 		switch ((AVDTP_KWORK(work))->sig) {
 		case BT_AVDTP_DISCOVER:
 			DISCOVER_REQ(AVDTP_KWORK(work))->status = -EPERM;
@@ -1151,7 +1162,8 @@ int bt_avdtp_l2cap_accept(struct bt_conn *conn, struct bt_l2cap_chan **chan)
 			session->current_lsep->session = session;
 			session->current_lsep->media_br_chan.chan.ops = &ops;
 			session->current_lsep->media_br_chan.rx.mtu	= BT_L2CAP_RX_MTU;
-			session->current_lsep->media_br_chan.chan.required_sec_level = BT_SECURITY_L2;
+			session->current_lsep->media_br_chan.chan.required_sec_level =
+					BT_SECURITY_L2;
 			*chan = &session->current_lsep->media_br_chan.chan;
 			session->current_lsep = NULL;
 		}
@@ -1250,8 +1262,8 @@ struct bt_avdtp_seid_info *bt_avdtp_parse_seids(struct net_buf *buf)
 	struct bt_avdtp_seid_info *seid = NULL;
 
 	if (buf != NULL) {
-		if (buf->len >= sizeof (*seid)) {
-			seid = net_buf_pull_mem(buf, sizeof (*seid));
+		if (buf->len >= sizeof(*seid)) {
+			seid = net_buf_pull_mem(buf, sizeof(*seid));
 		}
 	}
 
@@ -1284,7 +1296,9 @@ int bt_avdtp_get_capabilities(struct bt_avdtp *session,
 	return avdtp_send(session, buf, &param->req);
 }
 
-int bt_avdtp_parse_capability_codec(struct net_buf *buf, uint8_t *codec_type, uint8_t **codec_info_element, uint16_t *codec_info_element_len)
+int bt_avdtp_parse_capability_codec(struct net_buf *buf,
+	uint8_t *codec_type, uint8_t **codec_info_element,
+	uint16_t *codec_info_element_len)
 {
 	uint8_t data;
 	uint8_t length;
@@ -1320,7 +1334,8 @@ int bt_avdtp_parse_capability_codec(struct net_buf *buf, uint8_t *codec_type, ui
 					if (*codec_info_element_len > (length - 2)) {
 						*codec_info_element_len = (length - 2);
 					}
-					*codec_info_element = net_buf_pull_mem(buf, (*codec_info_element_len));
+					*codec_info_element =
+						net_buf_pull_mem(buf, (*codec_info_element_len));
 					return 0;
 				}
 			}

@@ -21,10 +21,10 @@
 #ifndef ZEPHYR_INCLUDE_BLUETOOTH_A2DP_CODEC_H_
 #define ZEPHYR_INCLUDE_BLUETOOTH_A2DP_CODEC_H_
 
-#if defined (CONFIG_BT_A2DP_SOURCE)
+#if defined(CONFIG_BT_A2DP_SOURCE)
 #include "sbc_encoder.h"
 #endif
-#if defined (CONFIG_BT_A2DP_SINK)
+#if defined(CONFIG_BT_A2DP_SINK)
 #include "oi_codec_sbc.h"
 #include "oi_status.h"
 #endif
@@ -75,14 +75,14 @@ struct bt_a2dp_codec_sbc_params {
 	uint8_t max_bitpool;
 } __packed;
 
-#if defined (CONFIG_BT_A2DP_SOURCE)
+#if defined(CONFIG_BT_A2DP_SOURCE)
 struct bt_a2dp_codec_sbc_encoder {
 	SBC_ENC_PARAMS sbc_encoder_params;
 	struct bt_a2dp_codec_sbc_params *sbc;
 };
 #endif
 
-#if defined (CONFIG_BT_A2DP_SINK)
+#if defined(CONFIG_BT_A2DP_SINK)
 struct bt_a2dp_codec_sbc_decoder {
 	OI_CODEC_SBC_DECODER_CONTEXT context;
 	uint32_t context_data[CODEC_DATA_WORDS(2, SBC_CODEC_FAST_FILTER_BUFFERS)];
@@ -102,12 +102,12 @@ uint8_t bt_a2dp_sbc_get_subband_num(struct bt_a2dp_codec_sbc_params *sbc_codec);
 uint8_t bt_a2dp_sbc_get_block_length(struct bt_a2dp_codec_sbc_params *sbc_codec);
 uint8_t bt_a2dp_sbc_get_channel_num(struct bt_a2dp_codec_sbc_params *sbc_codec);
 uint32_t bt_a2dp_sbc_get_sampling_frequency(struct bt_a2dp_codec_sbc_params *sbc_codec);
-#if defined (CONFIG_BT_A2DP_SOURCE)
+#if defined(CONFIG_BT_A2DP_SOURCE)
 int bt_a2dp_sbc_encoder_init(struct bt_a2dp_codec_sbc_encoder *sbc_encoder);
 int bt_a2dp_sbc_encode(struct bt_a2dp_codec_sbc_encoder *sbc_encoder, uint8_t
 						*input_frame, uint8_t *output_buffer, uint32_t *output_len);
 #endif
-#if defined (CONFIG_BT_A2DP_SINK)
+#if defined(CONFIG_BT_A2DP_SINK)
 int bt_a2dp_sbc_decoder_init(struct bt_a2dp_codec_sbc_decoder *sbc_decoder);
 int bt_a2dp_sbc_decode(struct bt_a2dp_codec_sbc_decoder *sbc_decoder,
 				uint8_t **sbc_data, uint32_t *sbc_data_len,

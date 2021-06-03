@@ -163,19 +163,26 @@ struct bt_avdtp_ops_cb {
 
 	int (*discovery_ind)(struct bt_avdtp *session, uint8_t *errcode);
 
-	int (*get_capabilities_ind)(struct bt_avdtp *session, struct bt_avdtp_seid_lsep *lsep, struct net_buf *rsp_buf, uint8_t *errcode);
+	int (*get_capabilities_ind)(struct bt_avdtp *session,
+		struct bt_avdtp_seid_lsep *lsep, struct net_buf *rsp_buf, uint8_t *errcode);
 
-	int (*set_configuration_ind)(struct bt_avdtp *session, struct bt_avdtp_seid_lsep *lsep, struct net_buf *buf, uint8_t *errcode);
+	int (*set_configuration_ind)(struct bt_avdtp *session,
+		struct bt_avdtp_seid_lsep *lsep, struct net_buf *buf, uint8_t *errcode);
 
-	int (*open_ind)(struct bt_avdtp *session, struct bt_avdtp_seid_lsep *lsep, uint8_t *errcode);
+	int (*open_ind)(struct bt_avdtp *session,
+		struct bt_avdtp_seid_lsep *lsep, uint8_t *errcode);
 
-	int (*close_ind)(struct bt_avdtp *session, struct bt_avdtp_seid_lsep *lsep, uint8_t *errcode);
+	int (*close_ind)(struct bt_avdtp *session,
+		struct bt_avdtp_seid_lsep *lsep, uint8_t *errcode);
 
-	int (*start_ind)(struct bt_avdtp *session, struct bt_avdtp_seid_lsep *lsep, uint8_t *errcode);
+	int (*start_ind)(struct bt_avdtp *session,
+		struct bt_avdtp_seid_lsep *lsep, uint8_t *errcode);
 
-	int (*suspend_ind)(struct bt_avdtp *session, struct bt_avdtp_seid_lsep *lsep, uint8_t *errcode);
+	int (*suspend_ind)(struct bt_avdtp *session,
+		struct bt_avdtp_seid_lsep *lsep, uint8_t *errcode);
 
-	int (*abort_ind)(struct bt_avdtp *session, struct bt_avdtp_seid_lsep *lsep, uint8_t *errcode);
+	int (*abort_ind)(struct bt_avdtp *session,
+		struct bt_avdtp_seid_lsep *lsep, uint8_t *errcode);
 };
 
 /** @brief Global AVDTP session structure. */
@@ -244,4 +251,3 @@ int bt_avdtp_send_media_data(struct bt_avdtp_seid_lsep *lsep,
 
 /* get media l2cap connection MTU */
 uint32_t bt_avdtp_get_media_mtu(struct bt_avdtp_seid_lsep *lsep);
-

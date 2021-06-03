@@ -85,16 +85,15 @@ uint32_t bt_a2dp_sbc_get_sampling_frequency(struct bt_a2dp_codec_sbc_params *sbc
 	}
 }
 
-#if defined (CONFIG_BT_A2DP_SINK)
+#if defined(CONFIG_BT_A2DP_SINK)
 int bt_a2dp_sbc_decoder_init(struct bt_a2dp_codec_sbc_decoder *sbc_decoder)
 {
 	OI_STATUS status = OI_CODEC_SBC_DecoderReset(
 					&sbc_decoder->context,
 					sbc_decoder->context_data,
-					sizeof (sbc_decoder->context_data),
+					sizeof(sbc_decoder->context_data),
 					2, 2, FALSE);
-	if (!OI_SUCCESS(status))
-	{
+	if (!OI_SUCCESS(status)) {
 		BT_DBG("OI_CODEC_SBC_DecoderReset error\r\n");
 	}
 	return 0;
@@ -112,18 +111,15 @@ int bt_a2dp_sbc_decode(struct bt_a2dp_codec_sbc_decoder *sbc_decoder,
 					pcm_data,
 					pcm_data_len
 					);
-	if (!OI_SUCCESS(status))
-	{
+	if (!OI_SUCCESS(status)) {
 		return -1;
-	}
-	else
-	{
+	} else {
 		return 0;
 	}
 }
 #endif
 
-#if defined (CONFIG_BT_A2DP_SOURCE)
+#if defined(CONFIG_BT_A2DP_SOURCE)
 static uint8_t bt_a2dp_sbc_get_allocation_method_index(struct bt_a2dp_codec_sbc_params *sbc_codec)
 {
 	__ASSERT_NO_MSG(sbc_codec != NULL);
@@ -175,11 +171,16 @@ int bt_a2dp_sbc_encoder_init(struct bt_a2dp_codec_sbc_encoder *sbc_encoder)
 {
 	memset(&sbc_encoder->sbc_encoder_params, 0, sizeof(sbc_encoder->sbc_encoder_params));
 
-	sbc_encoder->sbc_encoder_params.s16ChannelMode = bt_a2dp_sbc_get_channel_mode_index(sbc_encoder->sbc);
-	sbc_encoder->sbc_encoder_params.s16NumOfSubBands = bt_a2dp_sbc_get_subband_num(sbc_encoder->sbc);
-	sbc_encoder->sbc_encoder_params.s16NumOfBlocks = bt_a2dp_sbc_get_block_length(sbc_encoder->sbc);
-	sbc_encoder->sbc_encoder_params.s16AllocationMethod = bt_a2dp_sbc_get_allocation_method_index(sbc_encoder->sbc);
-	sbc_encoder->sbc_encoder_params.s16SamplingFreq = bt_a2dp_sbc_get_sampling_fequency_index(sbc_encoder->sbc);
+	sbc_encoder->sbc_encoder_params.s16ChannelMode =
+		bt_a2dp_sbc_get_channel_mode_index(sbc_encoder->sbc);
+	sbc_encoder->sbc_encoder_params.s16NumOfSubBands =
+		bt_a2dp_sbc_get_subband_num(sbc_encoder->sbc);
+	sbc_encoder->sbc_encoder_params.s16NumOfBlocks =
+		bt_a2dp_sbc_get_block_length(sbc_encoder->sbc);
+	sbc_encoder->sbc_encoder_params.s16AllocationMethod =
+		bt_a2dp_sbc_get_allocation_method_index(sbc_encoder->sbc);
+	sbc_encoder->sbc_encoder_params.s16SamplingFreq =
+		bt_a2dp_sbc_get_sampling_fequency_index(sbc_encoder->sbc);
 	sbc_encoder->sbc_encoder_params.u16BitRate = CONFIG_BT_A2DP_SBC_ENCODER_BIT_RATE;
 	SBC_Encoder_Init(&sbc_encoder->sbc_encoder_params);
 
@@ -187,13 +188,14 @@ int bt_a2dp_sbc_encoder_init(struct bt_a2dp_codec_sbc_encoder *sbc_encoder)
 }
 
 int bt_a2dp_sbc_encode(struct bt_a2dp_codec_sbc_encoder *sbc_encoder, uint8_t
-						*input_frame, uint8_t *output_buffer, uint32_t *output_len)
+	*input_frame, uint8_t *output_buffer, uint32_t *output_len)
 {
 	if ((sbc_encoder == NULL) || (input_frame == NULL) ||
 		(output_buffer == NULL) || (output_len == NULL)) {
 		return -EPERM;
 	}
-	*output_len = SBC_Encode(&sbc_encoder->sbc_encoder_params, (int16_t *)input_frame, output_buffer);
+	*output_len = SBC_Encode(&sbc_encoder->sbc_encoder_params,
+					(int16_t *)input_frame, output_buffer);
 	return 0;
 }
 #endif

@@ -30,7 +30,8 @@ extern "C" {
  *  @param _codec_buffer the codec function used buffer.
  *  @param _codec_buffer_nocahced the codec function used nocached buffer.
  */
-#define BT_A2DP_ENDPOINT_INIT(_role, _codec, _capability, _config, _codec_buffer, _codec_buffer_nocahced)\
+#define BT_A2DP_ENDPOINT_INIT(_role, _codec, _capability, _config,\
+	_codec_buffer, _codec_buffer_nocahced)\
 {\
 	.codec_id = _codec,\
 	.info = {.sep = {.media_type = BT_A2DP_AUDIO, .tsep = _role}, .next = NULL},\
