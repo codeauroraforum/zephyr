@@ -87,8 +87,7 @@ static struct net_buf *avdtp_create_pdu(uint8_t msg_type,
 					uint8_t pkt_type,
 					uint8_t sig_id);
 
-enum seid_state
-{
+enum seid_state {
 	AVDTP_IDLE = 0,
 	AVDTP_CONFIGURED,
 	/* establishing the transport sessions. */
@@ -429,10 +428,8 @@ static void avdtp_process_configuration(struct bt_avdtp *session,
 				if (err < 0) {
 					BT_DBG("set configuration err code:%d", error_code);
 				}
-				if ((err < 0) || (error_code != 0)) {
-					if (error_code == 0) {
-						error_code = BAD_ACP_SEID;
-					}
+				if ((err < 0) && (error_code == 0)) {
+					error_code = BAD_ACP_SEID;
 				}
 			}
 		}
@@ -544,10 +541,8 @@ static void avdtp_open_handler(struct bt_avdtp *session,
 				if (err < 0) {
 					BT_DBG("open_ind err code:%d", error_code);
 				}
-				if ((err < 0) || (error_code != 0)) {
-					if (error_code == 0) {
-						error_code = BAD_ACP_SEID;
-					}
+				if ((err < 0) && (error_code == 0)) {
+					error_code = BAD_ACP_SEID;
 				}
 			}
 		}
@@ -649,10 +644,8 @@ static void avdtp_start_handler(struct bt_avdtp *session,
 				if (err < 0) {
 					BT_DBG("start err code:%d", error_code);
 				}
-				if ((err < 0) || (error_code != 0)) {
-					if (error_code == 0) {
-						error_code = BAD_ACP_SEID;
-					}
+				if ((err < 0) && (error_code == 0)) {
+					error_code = BAD_ACP_SEID;
 				}
 			}
 		}
@@ -739,10 +732,8 @@ static void avdtp_close_handler(struct bt_avdtp *session,
 				if (err < 0) {
 					BT_DBG("close err code:%d", error_code);
 				}
-				if ((err < 0) || (error_code != 0)) {
-					if (error_code == 0) {
-						error_code = BAD_ACP_SEID;
-					}
+				if ((err < 0) && (error_code == 0)) {
+					error_code = BAD_ACP_SEID;
 				}
 			}
 		}
@@ -814,10 +805,8 @@ static void avdtp_suspend_handler(struct bt_avdtp *session,
 				if (err < 0) {
 					BT_DBG("suspend err code:%d", error_code);
 				}
-				if ((err < 0) || (error_code != 0)) {
-					if (error_code == 0) {
-						error_code = BAD_ACP_SEID;
-					}
+				if ((err < 0) && (error_code == 0)) {
+					error_code = BAD_ACP_SEID;
 				}
 			}
 		}
@@ -1328,12 +1317,13 @@ int bt_avdtp_parse_capability_codec(struct net_buf *buf,
 			length = net_buf_pull_u8(buf);
 			if (length > 3) {
 				data = net_buf_pull_u8(buf);
+				if (net_buf_tailroom(buf) < (length - 1)) {
+					return -EINVAL;
+				}
 				if (data == BT_A2DP_AUDIO) {
 					data = net_buf_pull_u8(buf);
 					*codec_type = data;
-					if (*codec_info_element_len > (length - 2)) {
-						*codec_info_element_len = (length - 2);
-					}
+					*codec_info_element_len = (length - 2);
 					*codec_info_element =
 						net_buf_pull_mem(buf, (*codec_info_element_len));
 					return 0;

@@ -105,7 +105,7 @@ uint32_t bt_a2dp_sbc_get_sampling_frequency(struct bt_a2dp_codec_sbc_params *sbc
 #if defined(CONFIG_BT_A2DP_SOURCE)
 int bt_a2dp_sbc_encoder_init(struct bt_a2dp_codec_sbc_encoder *sbc_encoder);
 int bt_a2dp_sbc_encode(struct bt_a2dp_codec_sbc_encoder *sbc_encoder, uint8_t
-						*input_frame, uint8_t *output_buffer, uint32_t *output_len);
+			*input_frame, uint8_t *output_buffer, uint32_t *output_len);
 #endif
 #if defined(CONFIG_BT_A2DP_SINK)
 int bt_a2dp_sbc_decoder_init(struct bt_a2dp_codec_sbc_decoder *sbc_decoder);

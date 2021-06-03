@@ -177,7 +177,8 @@ static int bt_a2dp_get_seid_caps(struct bt_a2dp *a2dp);
 static void a2dp_set_task_msg(void *parameter, uint8_t event);
 
 static struct bt_a2dp_endpoint_internal *bt_a2dp_get_endpoint_state(
-	struct bt_a2dp_endpoint *endpoint) {
+	struct bt_a2dp_endpoint *endpoint)
+{
 	for (uint8_t index = 0; index < CONFIG_BT_A2DP_MAX_ENDPOINT_COUNT; ++index) {
 		if (endpoint_internals[index].endpoint == endpoint) {
 			return &endpoint_internals[index];
@@ -693,8 +694,8 @@ static int bt_a2dp_set_configuration_cb(struct bt_avdtp_req *req)
 	struct bt_a2dp *a2dp = SET_CONF_PARAM(SET_CONF_REQ(req));
 	struct bt_a2dp_endpoint *endpoint;
 	struct bt_a2dp_endpoint_internal *ep_internal;
-	endpoint = CONTAINER_OF(a2dp->set_configuration_param.lsep, struct bt_a2dp_endpoint, info);
 
+	endpoint = CONTAINER_OF(a2dp->set_configuration_param.lsep, struct bt_a2dp_endpoint, info);
 	ep_internal = bt_a2dp_get_endpoint_state(endpoint);
 
 	if (ep_internal == NULL) {
@@ -719,7 +720,7 @@ static int bt_a2dp_set_configuration_cb(struct bt_avdtp_req *req)
 		} else {
 			/* todo:*/
 		}
-		
+
 	} else {
 		if (a2dp->auto_configure_enabled) {
 			bt_a2dp_auto_configure_callback(a2dp, -1);
@@ -733,70 +734,74 @@ static int bt_a2dp_set_configuration_cb(struct bt_avdtp_req *req)
 
 static void bt_a2dp_select_and_configure(struct bt_a2dp *a2dp)
 {
-	if ((a2dp->auto_select_endpoint_index != 0xFFu) &&
-			(a2dp->auto_select_endpoint_index < CONFIG_BT_A2DP_MAX_ENDPOINT_COUNT)) {
-		struct bt_a2dp_endpoint *self_endpoint =
-			endpoint_internals[a2dp->auto_select_endpoint_index].endpoint;
-		if (self_endpoint->codec_id == BT_A2DP_SBC) {
-			struct bt_a2dp_endpoint_internal *ep_internal;
+	struct bt_a2dp_endpoint *self_endpoint;
 
-			if (self_endpoint->config == NULL) {
-				bt_a2dp_auto_configure_callback(a2dp, -1);
-				return;
-			}
+	if ((a2dp->auto_select_endpoint_index == 0xFFu) ||
+			(a2dp->auto_select_endpoint_index >= CONFIG_BT_A2DP_MAX_ENDPOINT_COUNT)) {
+		return;
+	}
 
-			ep_internal = &endpoint_internals[a2dp->auto_select_endpoint_index];
+	self_endpoint =
+		endpoint_internals[a2dp->auto_select_endpoint_index].endpoint;
+	if (self_endpoint->codec_id == BT_A2DP_SBC) {
+		struct bt_a2dp_endpoint_internal *ep_internal;
 
-			a2dp->set_configuration_param.req.func = bt_a2dp_set_configuration_cb;
-			a2dp->set_configuration_param.acp_stream_endpoint_id =
-				ep_internal->remote_ep_info.id;
-			a2dp->set_configuration_param.int_stream_endpoint_id =
-				self_endpoint->info.sep.id;
-			a2dp->set_configuration_param.media_type = BT_A2DP_AUDIO;
-			a2dp->set_configuration_param.media_codec_type = BT_A2DP_SBC;
-			a2dp->set_configuration_param.codec_ie = self_endpoint->config;
-			a2dp->set_configuration_param.lsep = &self_endpoint->info;
+		if (self_endpoint->config == NULL) {
+			bt_a2dp_auto_configure_callback(a2dp, -1);
+			return;
+		}
 
-			ep_internal = bt_a2dp_get_endpoint_state(self_endpoint);
-			if (ep_internal != NULL) {
+		ep_internal = &endpoint_internals[a2dp->auto_select_endpoint_index];
+
+		a2dp->set_configuration_param.req.func = bt_a2dp_set_configuration_cb;
+		a2dp->set_configuration_param.acp_stream_endpoint_id =
+			ep_internal->remote_ep_info.id;
+		a2dp->set_configuration_param.int_stream_endpoint_id =
+			self_endpoint->info.sep.id;
+		a2dp->set_configuration_param.media_type = BT_A2DP_AUDIO;
+		a2dp->set_configuration_param.media_codec_type = BT_A2DP_SBC;
+		a2dp->set_configuration_param.codec_ie = self_endpoint->config;
+		a2dp->set_configuration_param.lsep = &self_endpoint->info;
+
+		ep_internal = bt_a2dp_get_endpoint_state(self_endpoint);
+		if (ep_internal != NULL) {
 #if defined(CONFIG_BT_A2DP_SOURCE)
-				struct bt_a2dp_codec_sbc_params *sbc =
-						(struct bt_a2dp_codec_sbc_params *)&(self_endpoint->config->codec_ie[0]);
-				if (self_endpoint->info.sep.tsep == BT_A2DP_SOURCE) {
-					ep_internal->encoder_decoder->encoder_sbc.
-						a2dp_pcm_sbc_framelen =
-						2 * bt_a2dp_sbc_get_subband_num(sbc) *
-						bt_a2dp_sbc_get_block_length(sbc) *
-						bt_a2dp_sbc_get_channel_num(sbc);
-					ep_internal->encoder_decoder->encoder_sbc.
-						sbc_encoder.sbc = sbc;
-					if (bt_a2dp_sbc_encoder_init(
-							&ep_internal->encoder_decoder->
-							encoder_sbc.sbc_encoder) != 0) {
-						BT_DBG("sbc encoder init fail");
-					}
+			struct bt_a2dp_codec_sbc_params *sbc =
+			(struct bt_a2dp_codec_sbc_params *)&(self_endpoint->config->codec_ie[0]);
+			if (self_endpoint->info.sep.tsep == BT_A2DP_SOURCE) {
+				ep_internal->encoder_decoder->encoder_sbc.
+					a2dp_pcm_sbc_framelen =
+					2 * bt_a2dp_sbc_get_subband_num(sbc) *
+					bt_a2dp_sbc_get_block_length(sbc) *
+					bt_a2dp_sbc_get_channel_num(sbc);
+				ep_internal->encoder_decoder->encoder_sbc.
+					sbc_encoder.sbc = sbc;
+				if (bt_a2dp_sbc_encoder_init(
+						&ep_internal->encoder_decoder->
+						encoder_sbc.sbc_encoder) != 0) {
+					BT_DBG("sbc encoder init fail");
 				}
+			}
 #endif
 #if defined(CONFIG_BT_A2DP_SINK)
-				if (self_endpoint->info.sep.tsep == BT_A2DP_SINK) {
-					/* todo: */
-				}
+			if (self_endpoint->info.sep.tsep == BT_A2DP_SINK) {
+				/* todo: */
+			}
 #endif
-			}
+		}
 
-			if (bt_avdtp_set_configuration(&a2dp->session,
-					&a2dp->set_configuration_param) != 0) {
-				bt_a2dp_auto_configure_callback(a2dp, -1);
-			}
-		} else {
-			/* todo: the follow codecs are not supported yet.
-			 * BT_A2DP_MPEG1
-			 * BT_A2DP_MPEG2
-			 * BT_A2DP_ATRAC
-			 * BT_A2DP_VENDOR
-			 */
+		if (bt_avdtp_set_configuration(&a2dp->session,
+				&a2dp->set_configuration_param) != 0) {
 			bt_a2dp_auto_configure_callback(a2dp, -1);
 		}
+	} else {
+		/* todo: the follow codecs are not supported yet.
+			* BT_A2DP_MPEG1
+			* BT_A2DP_MPEG2
+			* BT_A2DP_ATRAC
+			* BT_A2DP_VENDOR
+			*/
+		bt_a2dp_auto_configure_callback(a2dp, -1);
 	}
 }
 
@@ -810,69 +815,68 @@ static int bt_a2dp_get_capabilities_cb(struct bt_avdtp_req *req)
 	uint8_t index;
 
 	BT_DBG("GET CAPABILITIES result:%d", a2dp->get_capabilities_param.status);
-	if (!a2dp->get_capabilities_param.status) {
-		err = bt_avdtp_parse_capability_codec(a2dp->get_capabilities_param.buf,
-				&codec_type, &codec_info_element, &codec_info_element_len);
-		if (err) {
-			BT_DBG("codec capability parsing fail");
-			return 0;
-		}
-
-		if (a2dp->auto_configure_enabled) {
-			for (index = 0; index < bt_a2dp_get_endpoints_count(); index++) {
-				if (endpoint_internals[index].endpoint->codec_id ==
-						codec_type) {
-					if (index < a2dp->auto_select_endpoint_index) {
-						struct bt_a2dp_endpoint_internal *ep_internal =
-							&endpoint_internals[index];
-						a2dp->auto_select_endpoint_index = index;
-						ep_internal->remote_ep_info =
-							a2dp->peer_seids[a2dp->get_capabilities_index];
-						ep_internal->remote_codec_type = codec_type;
-
-						if (codec_info_element_len > A2DP_MAX_IE_LENGTH) {
-							codec_info_element_len = A2DP_MAX_IE_LENGTH;
-						}
-						memcpy(ep_internal->remote_ep_ie.codec_ie,
-							codec_info_element, codec_info_element_len);
-						ep_internal->remote_ep_ie.len = codec_info_element_len;
-					}
-				}
-			}
-			if (bt_a2dp_get_seid_caps(a2dp) != 0) {
-				bt_a2dp_select_and_configure(a2dp);
-			}
-		} else if (a2dp->discover_endpoint_cb != NULL) {
-			struct bt_a2dp_endpoint peer_endpoint;
-			struct bt_a2dp_codec_ie_internal peer_endpoint_internal_cap;
-
-			peer_endpoint.codec_id = codec_type;
-			peer_endpoint.info.sep =
-				a2dp->peer_seids[a2dp->get_capabilities_index];
-			peer_endpoint.info.next = NULL;
-			peer_endpoint.config = NULL;
-			if (codec_info_element_len > A2DP_MAX_IE_LENGTH) {
-				codec_info_element_len = A2DP_MAX_IE_LENGTH;
-			}
-			memcpy(peer_endpoint_internal_cap.codec_ie,
-				codec_info_element, codec_info_element_len);
-			peer_endpoint_internal_cap.len = codec_info_element_len;
-			peer_endpoint.capabilities =
-				(struct bt_a2dp_codec_ie *)&peer_endpoint_internal_cap;
-			if (a2dp->discover_endpoint_cb(a2dp, &peer_endpoint, 0) ==
-				BT_A2DP_DISCOVER_ENDPOINT_CONTINUE) {
-				if (bt_a2dp_get_seid_caps(a2dp) != 0) {
-					a2dp->discover_endpoint_cb(a2dp, NULL, 0);
-					a2dp->discover_endpoint_cb = NULL;
-				}
-			}
-		}
-	} else {
+	if (a2dp->get_capabilities_param.status) {
 		if (a2dp->auto_configure_enabled) {
 			bt_a2dp_select_and_configure(a2dp);
 		} else {
 			a2dp->discover_endpoint_cb(a2dp, NULL, 0);
 			a2dp->discover_endpoint_cb = NULL;
+		}
+		return 0;
+	}
+
+	err = bt_avdtp_parse_capability_codec(a2dp->get_capabilities_param.buf,
+			&codec_type, &codec_info_element, &codec_info_element_len);
+	if (err) {
+		BT_DBG("codec capability parsing fail");
+		return 0;
+	}
+
+	if (codec_info_element_len > A2DP_MAX_IE_LENGTH) {
+		codec_info_element_len = A2DP_MAX_IE_LENGTH;
+	}
+
+	if (a2dp->auto_configure_enabled) {
+		for (index = 0; index < bt_a2dp_get_endpoints_count(); index++) {
+			if (endpoint_internals[index].endpoint->codec_id ==
+					codec_type) {
+				if (index < a2dp->auto_select_endpoint_index) {
+					struct bt_a2dp_endpoint_internal *ep_internal =
+						&endpoint_internals[index];
+					a2dp->auto_select_endpoint_index = index;
+					ep_internal->remote_ep_info =
+						a2dp->peer_seids[a2dp->get_capabilities_index];
+					ep_internal->remote_codec_type = codec_type;
+
+					memcpy(ep_internal->remote_ep_ie.codec_ie,
+						codec_info_element, codec_info_element_len);
+					ep_internal->remote_ep_ie.len = codec_info_element_len;
+				}
+			}
+		}
+		if (bt_a2dp_get_seid_caps(a2dp) != 0) {
+			bt_a2dp_select_and_configure(a2dp);
+		}
+	} else if (a2dp->discover_endpoint_cb != NULL) {
+		struct bt_a2dp_endpoint peer_endpoint;
+		struct bt_a2dp_codec_ie_internal peer_endpoint_internal_cap;
+
+		peer_endpoint.codec_id = codec_type;
+		peer_endpoint.info.sep =
+			a2dp->peer_seids[a2dp->get_capabilities_index];
+		peer_endpoint.info.next = NULL;
+		peer_endpoint.config = NULL;
+		memcpy(peer_endpoint_internal_cap.codec_ie,
+			codec_info_element, codec_info_element_len);
+		peer_endpoint_internal_cap.len = codec_info_element_len;
+		peer_endpoint.capabilities =
+			(struct bt_a2dp_codec_ie *)&peer_endpoint_internal_cap;
+		if (a2dp->discover_endpoint_cb(a2dp, &peer_endpoint, 0) ==
+			BT_A2DP_DISCOVER_ENDPOINT_CONTINUE) {
+			if (bt_a2dp_get_seid_caps(a2dp) != 0) {
+				a2dp->discover_endpoint_cb(a2dp, NULL, 0);
+				a2dp->discover_endpoint_cb = NULL;
+			}
 		}
 	}
 
@@ -1253,10 +1257,10 @@ static int a2dp_source_sbc_encode_and_send(struct bt_a2dp_endpoint_internal *ep_
 
 		for (count = 0; count < (send_bytes >> 1); count++) {
 			encoder_sbc->a2dp_pcm_buffer_frame[count] =
-				(uint16_t)(((uint16_t)encoder_sbc->
-				a2dp_pcm_buffer[encoder_sbc->a2dp_pcm_buffer_r + 1] << 8) |
-				((uint16_t)encoder_sbc->a2dp_pcm_buffer
-				[encoder_sbc->a2dp_pcm_buffer_r]));
+			(uint16_t)(((uint16_t)
+			encoder_sbc->a2dp_pcm_buffer[encoder_sbc->a2dp_pcm_buffer_r + 1]
+			<< 8) | ((uint16_t)encoder_sbc->a2dp_pcm_buffer
+			[encoder_sbc->a2dp_pcm_buffer_r]));
 			encoder_sbc->a2dp_pcm_buffer_r += 2;
 			if (encoder_sbc->a2dp_pcm_buffer_r >=
 					CONFIG_BT_A2DP_SBC_ENCODER_PCM_BUFFER_SIZE) {
