@@ -324,7 +324,7 @@ int a2dp_set_configuration_ind(struct bt_avdtp *session, struct bt_avdtp_seid_ls
 
 	/* only support SBC now */
 	if (codec_type == BT_A2DP_SBC) {
-		struct bt_a2dp_configure_result result;
+		struct bt_a2dp_endpoint_configure_result result;
 
 		if (codec_info_element_len != 4U) {
 			*errcode = BAD_ACP_SEID;
@@ -347,7 +347,8 @@ int a2dp_set_configuration_ind(struct bt_avdtp *session, struct bt_avdtp_seid_ls
 		memcpy(&ep_internal->config_internal.codec_ie[0], codec_info_element,
 			(codec_info_element_len > 4U ? 4U : codec_info_element_len));
 
-		result.config = (struct bt_a2dp_codec_ie *)&ep_internal->config_internal;
+		result.config.media_config =
+			(struct bt_a2dp_codec_ie *)&ep_internal->config_internal;
 		result.err = 0;
 		if (endpoint->control_cbs.configured != NULL) {
 			endpoint->control_cbs.configured(&result);
@@ -650,7 +651,7 @@ int a2dp_suspend_ind(struct bt_avdtp *session, struct bt_avdtp_seid_lsep *lsep, 
 
 static void bt_a2dp_auto_configure_callback(struct bt_a2dp *a2dp, uint8_t err)
 {
-	struct bt_a2dp_configure_result config_result;
+	struct bt_a2dp_endpoint_configure_result config_result;
 	struct bt_a2dp_endpoint_internal *ep_internal;
 
 	ep_internal = &endpoint_internals[a2dp->auto_select_endpoint_index];
@@ -658,7 +659,8 @@ static void bt_a2dp_auto_configure_callback(struct bt_a2dp *a2dp, uint8_t err)
 	/* success */
 	if (!err) {
 		config_result.err = 0;
-		config_result.config = (struct bt_a2dp_codec_ie *)&ep_internal->config_internal;
+		config_result.config.media_config =
+			(struct bt_a2dp_codec_ie *)&ep_internal->config_internal;
 		ep_internal->a2dp = a2dp;
 		a2dp->configure_cb(0);
 		ep_internal->endpoint->control_cbs.configured(&config_result);
@@ -1001,7 +1003,7 @@ int bt_a2dp_discover_peer_endpoints(struct bt_a2dp *a2dp, bt_a2dp_discover_peer_
 
 int bt_a2dp_configure_endpoint(struct bt_a2dp *a2dp, struct bt_a2dp_endpoint *endpoint,
 		struct bt_a2dp_endpoint *peer_endpoint,
-		struct bt_a2dp_codec_ie *config)
+		struct bt_a2dp_endpoint_config *config)
 {
 	/* todo */
 	return 0;
@@ -1077,14 +1079,8 @@ int bt_a2dp_start(struct bt_a2dp_endpoint *endpoint)
 	return 0;
 }
 
-static int bt_a2dp_reconfigure_cb(struct bt_avdtp_req *req)
-{
-	/* todo: */
-	return 0;
-}
-
 int bt_a2dp_reconfigure(struct bt_a2dp_endpoint *endpoint,
-		struct bt_a2dp_codec_ie *config)
+		struct bt_a2dp_endpoint_config *config)
 {
 	/* todo: */
 	return 0;

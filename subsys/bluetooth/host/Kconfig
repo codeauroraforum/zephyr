@@ -788,7 +788,7 @@ config BT_A2DP
 if BT_AVDTP
 
 config BT_AVDTP_RTP_VERSION
-	bool "Bluetooth AVDTP RTP version"
+	int "Bluetooth AVDTP RTP version"
 	default 2
 	help
 	  This option sets the AVDTP RTP protocol version
@@ -868,6 +868,42 @@ config BT_A2DP_TASK_STACK_SIZE
 	default 8192
 	help
 	  This option sets A2DP profile task stack size
+
+config BT_A2DP_CP_SERVICE
+	bool "Enable Content Protection Service [EXPERIMENTAL]"
+	default n
+	help
+	  Enable Content Protection Service.
+
+config BT_A2DP_RECOVERY_SERVICE
+	bool "Enable Recovery Service [EXPERIMENTAL]"
+	default n
+	help
+	  Enable Recovery Service.
+
+config BT_A2DP_REPORTING_SERVICE
+	bool "Enable Reporting Service [EXPERIMENTAL]"
+	default n
+	help
+	  Enable Reporting Service.
+
+config BT_A2DP_DR_SERVICE
+	bool "Enable Delay Reporting Service [EXPERIMENTAL]"
+	default n
+	help
+	  Enable Delay Reporting Service.
+
+config BT_A2DP_HC_SERVICE
+	bool "Enable Header Compression Service [EXPERIMENTAL]"
+	default n
+	help
+	  Enable Header Compression Service.
+
+config BT_A2DP_MULTIPLEXING_SERVICE
+	bool "Enable MULTIPLEXING Service [EXPERIMENTAL]"
+	default n
+	help
+	  Enable MULTIPLEXING Service.
 
 endif # BT_A2DP
 

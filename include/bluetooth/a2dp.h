@@ -17,10 +17,59 @@
 extern "C" {
 #endif
 
-#define BT_A2DP_SOURCE_SBC_CODEC_BUFFER_SIZE (2264 + CONFIG_BT_A2DP_SBC_ENCODER_PCM_BUFFER_SIZE)
+/** SBC IE length */
+#define BT_A2DP_SBC_IE_LENGTH      (4u)
+/** MPEG1,2 IE length */
+#define BT_A2DP_MPEG_1_2_IE_LENGTH (4u)
+/** MPEG2,4 IE length */
+#define BT_A2DP_MPEG_2_4_IE_LENGTH (6u)
+
+#define BT_A2DP_SOURCE_SBC_CODEC_BUFFER_SIZE (2264U + CONFIG_BT_A2DP_SBC_ENCODER_PCM_BUFFER_SIZE)
 #define BT_A2DP_SOURCE_SBC_CODEC_BUFFER_NOCACHED_SIZE (0U)
 #define BT_A2DP_SINK_SBC_CODEC_BUFFER_SIZE (2600U)
 #define BT_A2DP_SINK_SBC_CODEC_BUFFER_NOCACHED_SIZE (CONFIG_BT_A2DP_SBC_DECODER_PCM_BUFFER_SIZE)
+
+#if ((defined(CONFIG_BT_A2DP_CP_SERVICE)) && (CONFIG_BT_A2DP_CP_SERVICE > 0U))
+#define BT_A2DP_EP_CONTENT_PROTECTION_INIT \
+.cp_ie = NULL,.cp_config = NULL,.cp_ie_count = 0,
+#else
+#define BT_A2DP_EP_CONTENT_PROTECTION_INIT
+#endif
+
+#if ((defined(CONFIG_BT_A2DP_RECOVERY_SERVICE)) && (CONFIG_BT_A2DP_RECOVERY_SERVICE > 0U))
+#define BT_A2DP_EP_RECOVERY_SERVICE_INIT \
+.recovery_ie = NULL,.recovery_config = NULL,
+#else
+#define BT_A2DP_EP_RECOVERY_SERVICE_INIT
+#endif
+
+#if ((defined(CONFIG_BT_A2DP_REPORTING_SERVICE)) && (CONFIG_BT_A2DP_REPORTING_SERVICE > 0U))
+#define BT_A2DP_EP_REPORTING_SERVICE_INIT \
+.reporting_service_enable = 0,
+#else
+#define BT_A2DP_EP_REPORTING_SERVICE_INIT
+#endif
+
+#if ((defined(CONFIG_BT_A2DP_DR_SERVICE)) && (CONFIG_BT_A2DP_DR_SERVICE > 0U))
+#define BT_A2DP_EP_DELAY_REPORTING_INIT \
+.delay_reporting_service_enable = 0, .control_cbs.sink_delay_report_cb = NULL,
+#else
+#define BT_A2DP_EP_DELAY_REPORTING_INIT
+#endif
+
+#if ((defined(CONFIG_BT_A2DP_HC_SERVICE)) && (CONFIG_BT_A2DP_HC_SERVICE > 0U))
+#define BT_A2DP_EP_HEADER_COMPRESSION_INIT \
+.header_compression_cap = 0,.header_compression_config = 0,
+#else
+#define BT_A2DP_EP_HEADER_COMPRESSION_INIT
+#endif
+
+#if ((defined(CONFIG_BT_A2DP_MULTIPLEXING_SERVICE)) && (CONFIG_BT_A2DP_MULTIPLEXING_SERVICE > 0U))
+#define BT_A2DP_EP_MULTIPLEXING_INIT \
+.header_compression_cap = 0,.header_compression_config = 0,
+#else
+#define BT_A2DP_EP_MULTIPLEXING_INIT
+#endif
 
 /** @brief define the audio endpoint
  *  @param _role BT_A2DP_SOURCE or BT_A2DP_SINK.
@@ -43,6 +92,12 @@ extern "C" {
 	.control_cbs.sink_streamer_data = NULL,\
 	.codec_buffer = (uint8_t *)(_codec_buffer),\
 	.codec_buffer_nocached = (uint8_t *)(_codec_buffer_nocahced),\
+	BT_A2DP_EP_CONTENT_PROTECTION_INIT\
+	BT_A2DP_EP_RECOVERY_SERVICE_INIT\
+	BT_A2DP_EP_REPORTING_SERVICE_INIT\
+	BT_A2DP_EP_DELAY_REPORTING_INIT\
+	BT_A2DP_EP_HEADER_COMPRESSION_INIT\
+	BT_A2DP_EP_MULTIPLEXING_INIT\
 }
 
 /** @brief define the audio sink endpoint
@@ -82,8 +137,8 @@ bt_a2dp_endpoint_codec_buffer##_name\
 [(BT_A2DP_SINK_SBC_CODEC_BUFFER_SIZE + 3) / 4];\
 static __nocache uint32_t bt_a2dp_endpoint_codec_buffer_nocached##_name\
 [(BT_A2DP_SINK_SBC_CODEC_BUFFER_NOCACHED_SIZE + 3) / 4];\
-static uint8_t bt_a2dp_endpoint_cap_buffer##_name[5] =\
-{4U, A2DP_SBC_SAMP_FREQ_44100 | A2DP_SBC_SAMP_FREQ_48000 | A2DP_SBC_CH_MODE_MONO | \
+static uint8_t bt_a2dp_endpoint_cap_buffer##_name[BT_A2DP_SBC_IE_LENGTH + 1] =\
+{BT_A2DP_SBC_IE_LENGTH, A2DP_SBC_SAMP_FREQ_44100 | A2DP_SBC_SAMP_FREQ_48000 | A2DP_SBC_CH_MODE_MONO | \
 A2DP_SBC_CH_MODE_STREO | A2DP_SBC_CH_MODE_JOINT, A2DP_SBC_BLK_LEN_16 | A2DP_SBC_SUBBAND_8 | \
 A2DP_SBC_ALLOC_MTHD_LOUDNESS, 18U, 35U};\
 static struct bt_a2dp_endpoint _name = BT_A2DP_SINK_ENDPOINT_INIT(BT_A2DP_SBC,\
@@ -102,13 +157,14 @@ static struct bt_a2dp_endpoint _name = BT_A2DP_SINK_ENDPOINT_INIT(BT_A2DP_SBC,\
  */
 #define BT_A2DP_SBC_SOURCE_ENDPOINT(_name, _config_freq)\
 uint32_t bt_a2dp_endpoint_codec_buffer##_name[(BT_A2DP_SOURCE_SBC_CODEC_BUFFER_SIZE + 3) / 4];\
-static uint8_t bt_a2dp_endpoint_cap_buffer##_name[5] = {4U, A2DP_SBC_SAMP_FREQ_44100 | \
+static uint8_t bt_a2dp_endpoint_cap_buffer##_name[BT_A2DP_SBC_IE_LENGTH + 1] =\
+{BT_A2DP_SBC_IE_LENGTH, A2DP_SBC_SAMP_FREQ_44100 | \
 A2DP_SBC_SAMP_FREQ_48000 | A2DP_SBC_CH_MODE_MONO | A2DP_SBC_CH_MODE_STREO | \
 A2DP_SBC_CH_MODE_JOINT, A2DP_SBC_BLK_LEN_16 | A2DP_SBC_SUBBAND_8 | A2DP_SBC_ALLOC_MTHD_LOUDNESS,\
 18U, 35U};\
-static uint8_t bt_a2dp_endpoint_preset_buffer##_name[5] =\
-{4U, _config_freq | A2DP_SBC_CH_MODE_JOINT, A2DP_SBC_BLK_LEN_16 | A2DP_SBC_SUBBAND_8 |\
-A2DP_SBC_ALLOC_MTHD_LOUDNESS, 18U, 35U};\
+static uint8_t bt_a2dp_endpoint_preset_buffer##_name[BT_A2DP_SBC_IE_LENGTH + 1] =\
+{BT_A2DP_SBC_IE_LENGTH, _config_freq | A2DP_SBC_CH_MODE_JOINT, A2DP_SBC_BLK_LEN_16 |\
+A2DP_SBC_SUBBAND_8 | A2DP_SBC_ALLOC_MTHD_LOUDNESS, 18U, 35U};\
 static struct bt_a2dp_endpoint _name = BT_A2DP_SOURCE_ENDPOINT_INIT(BT_A2DP_SBC,\
 &bt_a2dp_endpoint_cap_buffer##_name[0], &bt_a2dp_endpoint_preset_buffer##_name[0],\
 &bt_a2dp_endpoint_codec_buffer##_name[0], NULL)
@@ -158,12 +214,45 @@ struct bt_a2dp;
 
 struct bt_a2dp_endpoint;
 
+/** @brief The endpoint configuration */
+struct bt_a2dp_endpoint_config {
+	/** The media configuration content */
+	struct bt_a2dp_codec_ie *media_config;
+
+#if ((defined(CONFIG_BT_A2DP_CP_SERVICE)) && (CONFIG_BT_A2DP_CP_SERVICE > 0U))
+	/** Pointer to content protection config */
+	struct bt_a2dp_codec_ie *cp_config;
+#endif
+#if ((defined(CONFIG_BT_A2DP_RECOVERY_SERVICE)) && (CONFIG_BT_A2DP_RECOVERY_SERVICE > 0U))
+	/** Pointer to recovery service default config */
+	struct bt_a2dp_codec_ie *recovery_config; 
+#endif
+#if ((defined(CONFIG_BT_A2DP_REPORTING_SERVICE)) && (CONFIG_BT_A2DP_REPORTING_SERVICE > 0U))
+	/** reporting service configure flag */
+	uint8_t reporting_service_config;
+#endif
+#if ((defined(CONFIG_BT_A2DP_DR_SERVICE)) && (CONFIG_BT_A2DP_DR_SERVICE > 0U))
+	/** delay reporting service configure flag */
+	uint8_t delay_reporting_service_config;
+#endif
+#if ((defined(CONFIG_BT_A2DP_HC_SERVICE)) && (CONFIG_BT_A2DP_HC_SERVICE > 0U))
+	/** header compression config,
+	 *  0x00 means the endpoint doesn't configure defaultly.
+	 */
+	uint8_t header_compression_config;
+#endif
+#if ((defined(CONFIG_BT_A2DP_MULTIPLEXING_SERVICE)) && (CONFIG_BT_A2DP_MULTIPLEXING_SERVICE > 0U))
+	/** multiplexing service configure flag */
+	uint8_t multiplexing_service_config;
+#endif
+};
+
 /** @brief The configuration result */
-struct bt_a2dp_configure_result {
+struct bt_a2dp_endpoint_configure_result {
 	/** 0 - success; other values - fail code */
 	int err;
 	/** The configuration content */
-	struct bt_a2dp_codec_ie *config;
+	struct bt_a2dp_endpoint_config config;
 };
 
 /** @brief Helper enum to be used as return value of bt_a2dp_discover_peer_endpoint_cb_t.
@@ -184,7 +273,7 @@ struct bt_a2dp_control_cb {
 	 *
 	 *  @param err a2dp configuration result.
 	 */
-	void (*configured)(struct bt_a2dp_configure_result *config);
+	void (*configured)(struct bt_a2dp_endpoint_configure_result *config);
 	/** @brief a2dp is de-configured by peer.
 	 *
 	 *  @param err a2dp configuration result.
@@ -200,6 +289,27 @@ struct bt_a2dp_control_cb {
 	 *  @param length the data length.
 	 */
 	void (*sink_streamer_data)(uint8_t *data, uint32_t length);
+#if ((defined(CONFIG_BT_A2DP_DR_SERVICE)) && (CONFIG_BT_A2DP_DR_SERVICE > 0U))
+	union
+	{
+		/** @brief the delay report callback
+		 *
+		 *  it is called after received delay report data.
+		 *
+		 *  @param err error code.
+		 *  @param delay the delay value.
+		 */
+		void (*source_delay_report_cb)(int err, int16_t delay);
+		/** @brief the delay report callback
+		 *
+		 *  it is called after sending delay report data.
+		 *
+		 *  @param err error code.
+		 *  @param delay the delay value.
+		 */
+		void (*sink_delay_report_cb)(int err);
+	};
+#endif
 };
 
 /** @brief The connecting callback */
@@ -241,6 +351,42 @@ struct bt_a2dp_endpoint {
 	uint8_t *codec_buffer;
 	/** reserved codec related buffer (nocached) */
 	uint8_t *codec_buffer_nocached;
+#if ((defined(CONFIG_BT_A2DP_CP_SERVICE)) && (CONFIG_BT_A2DP_CP_SERVICE > 0U))
+	/** Pointer to content protection default config */
+	struct bt_a2dp_codec_ie *cp_config;
+	/** content protection ie */
+	struct bt_a2dp_codec_ie *cp_ie;
+	/** content protection ie count */
+	uint8_t cp_ie_count;
+#endif
+#if ((defined(CONFIG_BT_A2DP_RECOVERY_SERVICE)) && (CONFIG_BT_A2DP_RECOVERY_SERVICE > 0U))
+	/** recovery service capabilities ie */
+	struct bt_a2dp_codec_ie *recovery_ie;
+	/** Pointer to recovery service default config */
+	struct bt_a2dp_codec_ie *recovery_config;
+#endif
+#if ((defined(CONFIG_BT_A2DP_REPORTING_SERVICE)) && (CONFIG_BT_A2DP_REPORTING_SERVICE > 0U))
+	/** reporting service enable flag */
+	uint8_t reporting_service_enable;
+#endif
+#if ((defined(CONFIG_BT_A2DP_DR_SERVICE)) && (CONFIG_BT_A2DP_DR_SERVICE > 0U))
+	/** delay reporting service enable flag */
+	uint8_t delay_reporting_service_enable;
+#endif
+#if ((defined(CONFIG_BT_A2DP_HC_SERVICE)) && (CONFIG_BT_A2DP_HC_SERVICE > 0U))
+	/** header compression cap,
+	 *  0x00 means the endpoint doesn't support header compression
+	 */
+	uint8_t header_compression_cap;
+	/** header compression config,
+	 *  0x00 means the endpoint doesn't configure defaultly.
+	 */
+	uint8_t header_compression_config;
+#endif
+#if ((defined(CONFIG_BT_A2DP_MULTIPLEXING_SERVICE)) && (CONFIG_BT_A2DP_MULTIPLEXING_SERVICE > 0U))
+	/** multiplexing service enable */
+	uint8_t multiplexing_service_enable;
+#endif
 };
 
 /** @brief A2DP Connect.
@@ -346,7 +492,7 @@ int bt_a2dp_discover_peer_endpoints(struct bt_a2dp *a2dp, bt_a2dp_discover_peer_
  */
 int bt_a2dp_configure_endpoint(struct bt_a2dp *a2dp, struct bt_a2dp_endpoint *endpoint,
 		struct bt_a2dp_endpoint *peer_endpoint,
-		struct bt_a2dp_codec_ie *config);
+		struct bt_a2dp_endpoint_config *config);
 
 /** @brief revert the configuration, then it can be configured again.
  *
@@ -375,15 +521,6 @@ int bt_a2dp_start(struct bt_a2dp_endpoint *endpoint);
  */
 int bt_a2dp_stop(struct bt_a2dp_endpoint *endpoint);
 
-/** @brief get the peer's endpoint information that is configured.
- *
- * The capabilities of the peer endpoint that is configured by bt_a2dp_configure or
- * bt_a2dp_configure_endpoint.
- *
- *  @return the peer endpoint that is configured or NULL
- */
-struct bt_a2dp_codec_ie *bt_a2dp_get_peer_endpoint_capability(struct bt_a2dp_endpoint *endpoint);
-
 /** @brief re-configure a2dp streamer
  *
  * This function send the AVDTP_RECONFIGURE command
@@ -395,7 +532,7 @@ struct bt_a2dp_codec_ie *bt_a2dp_get_peer_endpoint_capability(struct bt_a2dp_end
  *  @return 0 in case of success and error code in case of error.
  */
 int bt_a2dp_reconfigure(struct bt_a2dp_endpoint *endpoint,
-		struct bt_a2dp_codec_ie *config);
+		struct bt_a2dp_endpoint_config *config);
 
 #if ((defined(CONFIG_BT_A2DP_SOURCE)) && (CONFIG_BT_A2DP_SOURCE > 0U))
 /** @brief send a2dp streamer data
@@ -423,6 +560,39 @@ int bt_a2dp_src_media_write(struct bt_a2dp_endpoint *endpoint,
  */
 int bt_a2dp_snk_media_sync(struct bt_a2dp_endpoint *endpoint,
 							uint8_t *data, uint16_t datalen);
+#endif
+
+#if ((defined(CONFIG_BT_A2DP_CP_SERVICE)) && (CONFIG_BT_A2DP_CP_SERVICE > 0U))
+/** @brief set the content protection header.
+ *
+ *  @param endpoint The endpoint.
+ *  @param header The header data.
+ *  @param header_len The header data length.
+ *
+ *  @return 0 in case of success and error code in case of error.
+ */
+int bt_a2dp_set_cp_header(struct bt_a2dp_endpoint *endpoint, uint8_t *header, uint16_t header_len);
+#endif
+
+#if ((defined(CONFIG_BT_A2DP_DR_SERVICE)) && (CONFIG_BT_A2DP_DR_SERVICE > 0U))
+/** @brief set the initial delay report data.
+ *
+ *  @param endpoint The endpoint.
+ *  @param delay The delay value.
+ *
+ *  @return 0 in case of success and error code in case of error.
+ */
+int bt_a2dp_set_initial_delay_report(struct bt_a2dp_endpoint *endpoint, int16_t delay);
+
+/** @brief send delay report data.
+ *
+ *  @param endpoint The endpoint.
+ *  @param delay The delay value.
+ *
+ *  @return 0 in case of success and error code in case of error.
+ */
+int bt_a2dp_send_delay_report(struct bt_a2dp_endpoint *endpoint, int16_t delay);
+
 #endif
 
 #ifdef __cplusplus
